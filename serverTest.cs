@@ -356,7 +356,7 @@ public class serverTest : MonoBehaviour
                 break;
 
             case ENet.EventType.Receive:
-                byte[] data = new byte[netEvent.Packet.Length];
+                byte[] data = ByteBuffer.GetByteBuffer(); //new byte[netEvent.Packet.Length];
                 netEvent.Packet.CopyTo(data);
                 shd[(int)netEvent.Peer.Data].HandleNetworkMessages(data, (int)netEvent.Peer.Data);
 
