@@ -1,9 +1,17 @@
-﻿using System.Collections;
+﻿#define NET_4_6
+
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
+using NetStack.Compression;
+using NetStack.Serialization;
 using ENet;
 using System;
+using MySql.Data.MySqlClient;
+using System.Globalization;
+using Event = ENet.Event;
+using EventType = ENet.EventType;
+using static Constants;
 
 // NOTE: channel ids for sending packets goes as such:
 //  0 for login stuff and initialization, stuff that can wait
@@ -13,217 +21,55 @@ using System;
 
 public class serverTest : MonoBehaviour
 {
-    public static int maps = 2;
-    public static int gamemodes = 2;
-    public static int lobbies = 350;
-
-    public class LobbyAndChallenges
-    {
-        // first dimension is map, 2nd gametype, 3rd is game #. for id, 4th dimension is players in lobby
-        //public game[,,] game = new game[maps,gamemodes,maxLobbies];
-        public int[,,] gameSeed = new int[maps, gamemodes, lobbies];
-        public bool[,,] gameStarted = new bool[maps, gamemodes, lobbies];
-        public string[,,] gameName = new string[maps,gamemodes, lobbies];
-        //private string[,,] gameOwner = new string[maps, gamemodes, maxLobbies];
-        private string[,,] gamePass = new string[maps, gamemodes, lobbies];
-        public byte[,,] slots = new byte[maps, gamemodes, lobbies]; //number of players connected - 1, for example if 1 player connected slots = 0
-        public int[,,,] id = new int[maps, gamemodes, lobbies, 4]; // index of client in RemoteClient array
-        public bool[,,,] loaded = new bool[maps, gamemodes, lobbies, 4];
-        public bool[,,,] dead = new bool[maps, gamemodes, lobbies, 4];
-        public bool[,,,] ready = new bool[maps, gamemodes, lobbies, 4];
-        public int[,,,] distance = new int[maps, gamemodes, lobbies, 4];
-        public IEnumerator[,,] SendMovement = new IEnumerator[maps, gamemodes, lobbies];
-        public IEnumerator[,,] matchTimer = new IEnumerator[maps, gamemodes, lobbies];
-        public int[,,] matchTime = new int[maps, gamemodes, lobbies];
-
-        private static int maxChallenges = 5000;
-
-        private string[,] recordHolder = new string[maps, maxChallenges];
-        private string[,] creator = new string[maps, maxChallenges];
-        private int[,] timesPlayed = new int[maps, maxChallenges];
-        private int[,] cDistance = new int[maps, maxChallenges];
-
-        public bool LobbyNull(byte map, byte gamemode, int num)
-        {
-            if(gameName[map,gamemode,num] == null)
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        public bool GameHasFinished(byte map, byte mode, int num)
-        {
-            for(int i = 0; i <= slots[map,mode,num]; i++)
-            {
-                if (!dead[map, mode, num, i])
-                    return false;
-            }
-            return true;
-        }
-
-        public bool AllPlayersReady(byte map, byte mode, int num)
-        {
-            for (int i = 0; i < ((mode + 1) * 2); i++)
-            {
-                if (!ready[map, mode, num, i])
-                    return false;
-            }
-            return true;
-        }
-
-        public void ReturnGame(byte map, byte gamemode, int num, out string gameName, out string pass, out byte slots)
-        {
-            gameName = this.gameName[map,gamemode,num];
-            pass = this.gamePass[map, gamemode, num];
-            slots = this.slots[map,gamemode,num];
-        }
-
-        public void ReturnChallenges(byte map, int num, out string recordHolder, out string creator, out int timesPlayed, out int distance)
-        {
-            recordHolder = this.recordHolder[map,num];
-            creator = this.creator[map,num];
-            timesPlayed = this.timesPlayed[map,num];
-            distance = this.cDistance[map,num];
-        }
-
-        public int CreateLobby(int peerID, byte map, byte gamemode, string clientName, string name, string pass)
-        {
-            // find first available lobby 'slot'
-            for(int i = 0; i < lobbies; i++)
-            {
-                if(gameName[map,gamemode,i] == null)
-                {
-                    int seed = UnityEngine.Random.Range(12, 8123051);
-                    gameName[map,gamemode, i] = name;
-                    gamePass[map,gamemode, i] = pass;
-                    id[map, gamemode, i, 0] = peerID;
-                    Debug.Log("assigned player to " + map + ", " + gamemode + ", " + i + ", " + 0 + " proof: his id in that spot: " + id[map,gamemode, i, 0]);
-                    slots[map, gamemode, i] = 0;
-                    return i;
-                }
-            }
-            throw new System.ArgumentException("Could not create lobby: too many lobbies on this server");
-        }
-
-        public void StartGame(byte map, byte gamemode, int num)
-        {
-            matchTime[map, gamemode, num] = 0;
-            gameSeed[map,gamemode, num] = UnityEngine.Random.Range(12, 8123051);
-            for(int i = 0; i <= slots[map,gamemode,num]; i++)
-            {
-                loaded[map, gamemode, num, i] = false;
-                dead[map, gamemode, num, i] = false;
-                ready[map, gamemode, num, i] = false;
-                distance[map, gamemode, num, i] = 0;
-            }
-
-        }
-
-        public bool FindFirstAvailableLobby(int peerID, byte map, out byte gamemode, out int num)
-        {
-            for (gamemode = 0; gamemode < 2; gamemode++)
-            {
-                for (num = 0; num < lobbies; num++)
-                {
-                    if (gameName[map, gamemode, num] != null)
-                    {
-                        if (!gameStarted[map, gamemode, num])
-                        {
-                            if(slots[map,gamemode,num] < ((gamemode + 1) *2) - 1)
-                            if (gamePass[map, gamemode, num] == "")
-                            {
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-            num = 0;
-            return false;
-        }
-
-        public bool FindLobbyAssociatedWithClient(int id, out byte m, out byte g, out int n, out byte p)
-        {
-            for(m = 0; m < maps; m++)
-            {
-                for (g = 0; g < gamemodes; g++)
-                {
-                    for (n = 0; n < lobbies; n++)
-                    {
-                        for (p = 0; p <= slots[m,g,n]; p++)
-                        {
-                            if (id == this.id[m, g, n, p])
-                            {
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-            m = 0; g = 0; n = 0; p = 0;
-            return false;
-        }
-   
-        public void LeaveLobby(byte map, byte gamemode, int num, byte pos)
-        {
-            // shift all slots above this pos down one
-            int slots = this.slots[map, gamemode, num];
-            for (int i = pos; i < slots; i++) // make all slots between pos-onelessfrommaxslots equal to one above;
-            {
-                int posAbove = i + 1;
-                id[map, gamemode, num, i] = id[map, gamemode, num, posAbove];
-                loaded[map, gamemode, num, i] = loaded[map, gamemode, num, posAbove];
-                dead[map, gamemode, num, i] = dead[map, gamemode, num, posAbove];
-                ready[map, gamemode, num, i] = ready[map, gamemode, num, posAbove];
-                distance[map, gamemode, num, i] = distance[map, gamemode, num, posAbove];
-                
-            }
-
-            id[map, gamemode, num, slots] = -1; // -1 = null since lowest assigned client id is 1 (always make last slot empty since we shift down)
-            loaded[map, gamemode, num, slots] = false;
-            dead[map, gamemode, num, slots] = false;
-            ready[map, gamemode, num, slots] = false;
-            distance[map, gamemode, num, slots] = 0;
-
-
-            Debug.Log(slots);
-            // delete player from simulation
-            //Destroy(game[map, gamemode, num].transform.Find("Boulders").GetChild(pos));
-
-            // if no players in lobby, delete it
-            if (slots < 1)
-            {
-                gameName[map, gamemode, num] = null;
-                //Destroy(game[map, gamemode, num].transform);
-                gameStarted[map, gamemode, num] = false;
-            }
-            else
-                this.slots[map, gamemode, num] -= 1;
-        }
-    }
-
-    public LobbyAndChallenges lac = new LobbyAndChallenges();
-
     Host server;
     Address address;
     ushort port = 40000;
-    static int maxClients = 4000;
-    int playerCount;
+    protected Peer[] peers = new Peer[maxClients];
 
-    private ServerHandleData[] shd = new ServerHandleData[maxClients];
-    public DataBaseHandler DBH;
-    [NonSerialized]
-    public Peer[] peers = new Peer[maxClients];
+    [ThreadStatic]
+    private static byte[] byteBuffer = new byte[64];
+    [ThreadStatic]
+    private static IntPtr[] pointerBuffer = new IntPtr[Library.maxPeers];
+    [ThreadStatic]
+    private static BitBuffer bitBuffer = new BitBuffer(128);
 
-    #region player values
+    private LobbyAndChallenges lac = new LobbyAndChallenges();
+    private DataBaseHandler DBH;
+
+    // declared here to reduce GC while handling login/register for each client
+    # region loginRegVariables 
+
+    string dbIP;
+    string dbPass;
+    new string name;
+    List<byte> loginSkins = new List<byte>();
+    List<byte> loginPowerups = new List<byte>();
+    string userORemail;
+    string pass;
+    string email;
+    string user;
+
+    string dateStr;
+    #endregion
+
+    string command; // for MySql cmds
+
+    private string[] dateFormats = new string[] { "M/dd/yyyy hh:mm:ss tt", "M/dd/yyyy h:mm:ss tt", "M/d/yyyy hh:mm:ss tt", "M/d/yyyy h:mm:ss tt", "MM/d/yyyy hh:mm:ss tt", "MM/d/yyyy h:mm:ss tt", "MM/dd/yyyy hh:mm:ss tt", "MM/dd/yyyy h:mm:ss tt" };
+
+    private struct LoginRegisterValues
+    {
+        public int id;
+        public bool loggedIn;
+        public bool isGuest;
+    }
+
+    #region client values
+    LoginRegisterValues[] LRV = new LoginRegisterValues[maxClients];
     [NonSerialized]
     public bool[] playerInLobby = new bool[maxClients];
     [NonSerialized]
     public string[] playerName = new string[maxClients];
+    private string[] ip = new string[maxClients];
     private int[] xp = new int[maxClients];
     private byte[] skin = new byte[maxClients];
     private byte[] powerup = new byte[maxClients];
@@ -234,18 +80,18 @@ public class serverTest : MonoBehaviour
     private int[] timePlayed = new int[maxClients];
     private int[] soloWins = new int[maxClients];
     private int[] fourPlayerWins = new int[maxClients];
-    private Vector3[] playerPosition = new Vector3[maxClients];
-    private Vector3[] playerRotation = new Vector3[maxClients];
-
-    int[] skinPrices = {0, 800, 2000 };
-    int[] powerupPrices = {0, 1500, 3000, 1500};
-    int[] tokenRockPrices = { 2000};
-    int[] tokenRockQuantities = { 400 };
-
+    private CompressedVector3[] playerPosition = new CompressedVector3[maxClients];
+    private CompressedQuaternion[] playerRotation = new CompressedQuaternion[maxClients];
     #endregion
 
-    // Use this for initialization
     void Start()
+    {
+        ENet.Library.Initialize();
+        InitializeLAC();
+        DBH = new DataBaseHandler();
+        StartServer();
+    }
+    private void InitializeLAC()
     {
         for (byte m = 0; m < maps; m++)
         {
@@ -253,7 +99,7 @@ public class serverTest : MonoBehaviour
             {
                 for (int l = 0; l < lobbies; l++)
                 {
-                    lac.SendMovement[m,g,l] = SendMovement(m, g, l);
+                    lac.SendMovement[m, g, l] = SendMovement(m, g, l);
                     lac.matchTimer[m, g, l] = MatchTimer(m, g, l);
                     for (int p = 0; p < 4; p++)
                     {
@@ -262,17 +108,7 @@ public class serverTest : MonoBehaviour
                 }
             }
         }
-        ENet.Library.Initialize();
-        StartServer();
-        DBH = new DataBaseHandler();
-
-        for(int i = 0; i < maxClients; i++)
-        {
-            skins[i] = new List<byte>();
-            powerups[i] = new List<byte>();
-        }
     }
-
     private void StartServer()
     {
         server = new Host();
@@ -283,91 +119,880 @@ public class serverTest : MonoBehaviour
 
     private void Update()
     {
-        ENet.Event netEvent;
+        Event netEvent;
         server.Service(0, out netEvent);
         switch (netEvent.Type)
         {
-            case ENet.EventType.None:
+            case EventType.None:
                 break;
-            case ENet.EventType.Connect:
-                Debug.Log("Client connected (ID: " + netEvent.Peer.ID + ", IP: " + netEvent.Peer.IP + ")");
-                playerCount++;
-                for (int i = 0; i < maxClients; i++)
-                {
-                    if (!peers[i].IsSet || peers[i].Data == (IntPtr)(-1))
-                    {
-                        peers[i] = netEvent.Peer;
-                        peers[i].Data = new System.IntPtr(i);
-                        shd[i] = new ServerHandleData();
-                        shd[i].Initialize(this, netEvent.Peer.IP);
-                        Debug.Log(i);
-                        break;
-                    }
-                }
-                Debug.Log("assigned peer");
+            case EventType.Connect:
+                Connect(netEvent);
                 break;
 
-            case ENet.EventType.Disconnect:
-                Debug.Log("Client disconnected (ID: " + netEvent.Peer.ID + ", IP: " + netEvent.Peer.IP + ")");
-                int peerID = (int)netEvent.Peer.Data;
-                Debug.Log(peerID);
-                peers[peerID].Data = (IntPtr)(-1);
-                playerName[peerID] = null;
-                // logout player from db
-                shd[peerID].ClientDisconnected(xp[peerID], rocks[peerID], boulderTokens[peerID], skin[peerID], powerup[peerID]);
-                shd[peerID] = null;
-                //find lobby associated with client
-                byte map;
-                byte gamemode;
-                int num;
-                byte pos;
-                if (lac.FindLobbyAssociatedWithClient(peerID, out map, out gamemode, out num, out pos))
-                {
-                    // subtract slot from lobby
-                    playerInLobby[peerID] = false;
-                    lac.LeaveLobby(map, gamemode, num, pos);
-
-                    // tell other clients that we left
-                    SendToOthersLeftLobby(map, gamemode, num, pos);
-                    CheckIfGameDone(map,gamemode,num);
-                }
+            case EventType.Disconnect:
+                Disconnect(netEvent);
                 break;
 
-            case ENet.EventType.Timeout:
-                Debug.Log("Client timeout (ID: " + netEvent.Peer.ID + ", IP: " + netEvent.Peer.IP + ")");
-                peerID = (int)netEvent.Peer.Data;
-                peers[peerID].Data = (IntPtr)(-1);
-                playerName[peerID] = null;
-                // logout player from db
-                shd[peerID].ClientDisconnected(xp[peerID], rocks[peerID], boulderTokens[peerID], skin[peerID], powerup[peerID]);
-
-                //find lobby associated with client
-                if (lac.FindLobbyAssociatedWithClient(peerID, out map, out gamemode, out num, out pos))
-                {
-                    // subtract slot from lobby
-                    Debug.Log("still going");
-                    playerInLobby[peerID] = false;
-                    lac.LeaveLobby(map, gamemode, num, pos);
-
-                    // tell other clients that we left
-                    SendToOthersLeftLobby(map, gamemode, num, pos);
-                    CheckIfGameDone(map, gamemode, num);
-                }
+            case EventType.Timeout:
+                Disconnect(netEvent);
                 break;
 
-            case ENet.EventType.Receive:
-                byte[] data = ByteBuffer.GetByteBuffer(); //new byte[netEvent.Packet.Length];
-                netEvent.Packet.CopyTo(data);
-                shd[(int)netEvent.Peer.Data].HandleNetworkMessages(data, (int)netEvent.Peer.Data);
-
-                netEvent.Packet.Dispose();
+            case EventType.Receive:
+                ProcessPacket(netEvent);
                 break;
         }
     }
 
-    IEnumerator StopSendingMovement (byte map, byte mode, int num)
+    private void Connect(Event netEvent)
     {
-        yield return new WaitForSeconds(5);
+        Debug.Log("Client connected (ID: " + netEvent.Peer.ID + ", IP: " + netEvent.Peer.IP + ")");
+        for (int i = 0; i < maxClients; i++)
+        {
+            if (!peers[i].IsSet || peers[i].Data == (IntPtr)(-1))
+            {
+                peers[i] = netEvent.Peer;
+                peers[i].Data = new System.IntPtr(i);
+                ip[i] = netEvent.Peer.IP;
+                LRV[i] = new LoginRegisterValues();
+                break;
+            }
+        }
+    }
+
+    private void Disconnect(Event netEvent)
+    {
+        Debug.Log("Client disconnected (ID: " + netEvent.Peer.ID + ", IP: " + netEvent.Peer.IP + ")");
+        int peerID = (int)netEvent.Peer.Data;
+        peers[peerID].Data = (IntPtr)(-1);
+        playerName[peerID] = null;
+        // logout player from db
+        ClientDisconnected(peerID, xp[peerID], rocks[peerID], boulderTokens[peerID], skin[peerID], powerup[peerID]);
+        //find lobby associated with client
+        byte map;
+        byte gamemode;
+        int num;
+        byte pos;
+        if (lac.FindLobbyAssociatedWithClient(peerID, out map, out gamemode, out num, out pos))
+        {
+            // subtract slot from lobby
+            playerInLobby[peerID] = false;
+            lac.LeaveLobby(map, gamemode, num, pos);
+
+            // tell other clients that we left
+            SendToOthersLeftLobby(map, gamemode, num, pos);
+            CheckIfGameDone(map, gamemode, num);
+        }
+    }
+
+    private void ProcessPacket(Event netEvent)
+    {
+        netEvent.Packet.CopyTo(byteBuffer);
+        int peerID = (int)netEvent.Peer.Data;
+        Debug.Log("Packet received");
+        // add bytebuffer to bitBuffer & read packet id
+        bitBuffer.FromArray(byteBuffer, byteBuffer.Length - 4);
+        byte packetNum = bitBuffer.ReadByte();
+
+        // handle packet
+        switch (packetNum)
+        {
+            case (byte)ServerPackets.LoadedGame:
+                HandleLoadedGame(peerID);
+                break;
+            case (byte)ServerPackets.QuickPlay:
+                HandleQuickPlay(peerID);
+                break;
+            case (byte)ServerPackets.LoginRegister:
+                HandleLogin(peerID);
+                break;
+            case (byte)ServerPackets.CreateChar:
+                HandleCreateChar(peerID);
+                break;
+            case (byte)ServerPackets.ConnectLobby:
+                HandleConnectLobby(peerID);
+                break;
+            case (byte)ServerPackets.CreateLobby:
+                HandleCreateLobby(peerID);
+                break;
+            case (byte)ServerPackets.CreateChallenge:
+                break;
+            case (byte)ServerPackets.LeaveLobby:
+                HandleLeaveLobby(peerID);
+                break;
+            case (byte)ServerPackets.Dead:
+                HandleDead(peerID);
+                break;
+            case (byte)ServerPackets.Kick:
+                HandleKick(peerID);
+                break;
+            case (byte)ServerPackets.PlayerPosition:
+                HandlePlayerPosition(peerID);
+                break;
+            case (byte)ServerPackets.HandleExplode:
+                HandleExplode(peerID);
+                break;
+            case (byte)ServerPackets.ObstacleHit:
+                HandleObstacleHit(peerID);
+                break;
+            case (byte)ServerPackets.PlayAsGuest:
+                HandlePlayAsGuest(peerID);
+                break;
+            case (byte)ServerPackets.ReadyUp:
+                HandleReadyUp(peerID);
+                break;
+            case (byte)ServerPackets.EquipItem:
+                HandleEquipItem(peerID);
+                break;
+            case (byte)ServerPackets.PurchaseItem:
+                HandlePurchaseItem(peerID);
+                break;
+            default:
+                Debug.Log("Packet id could not be found, packet id:" + packetNum);
+                break;
+        }
+
+        // clears buffers for re-use
+        bitBuffer.Clear();
+        Array.Clear(byteBuffer, 0, byteBuffer.Length);
+
+        netEvent.Packet.Dispose();
+    }
+
+    #region Old SHD
+
+    // game stuff
+    private void HandlePlayerPosition(int peerID)
+    {
+        if (LRV[peerID].loggedIn)
+        {
+            CompressedVector3 position;
+            CompressedQuaternion rotation;
+
+            position.x = (ushort)bitBuffer.ReadUInt();
+            position.y = (ushort)bitBuffer.ReadUInt();
+            position.z = (ushort)bitBuffer.ReadUInt();
+
+            rotation.m = bitBuffer.ReadByte();
+            rotation.a = (short)bitBuffer.ReadInt();
+            rotation.b = (short)bitBuffer.ReadInt();
+            rotation.c = (short)bitBuffer.ReadInt();
+            UpdatePlayerPosition(peerID, position, rotation);
+        }
+    }
+
+    private void HandleExplode(int peerID)
+    {
+        if (LRV[peerID].loggedIn)
+        {
+            byte map = bitBuffer.ReadByte();
+            byte mode = bitBuffer.ReadByte();
+            int num = bitBuffer.ReadInt();
+            byte pos = bitBuffer.ReadByte();
+            bitBuffer.Clear();
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            SendExplode(peerID, map, mode, num, pos);
+        }
+    }
+
+    private void HandleDead(int peerID)
+    {
+        if (LRV[peerID].loggedIn)
+        {
+            byte map = bitBuffer.ReadByte();
+            byte mode = bitBuffer.ReadByte();
+            int num = bitBuffer.ReadInt();
+            byte pos = bitBuffer.ReadByte();
+            int distance = bitBuffer.ReadInt();
+            bitBuffer.Clear();
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            Dead(peerID, map, mode, num, pos, distance);
+        }
+    }
+
+    private void HandlePowerup(int peerID)
+    {
+        if (LRV[peerID].loggedIn)
+        {
+            byte map = bitBuffer.ReadByte();
+            byte mode = bitBuffer.ReadByte();
+            int num = bitBuffer.ReadInt();
+            byte pos = bitBuffer.ReadByte();
+            bitBuffer.Clear();
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            SendPowerup(peerID, map, mode, num, pos);
+        }
+    }
+
+    private void HandleObstacleHit(int peerID)
+    {
+        if (LRV[peerID].loggedIn)
+        {
+            byte map = bitBuffer.ReadByte();
+            byte mode = bitBuffer.ReadByte();
+            int num = bitBuffer.ReadInt();
+            byte pos = bitBuffer.ReadByte();
+
+            byte type = bitBuffer.ReadByte();
+            string name = bitBuffer.ReadString();
+            byte dmg = bitBuffer.ReadByte();
+            bitBuffer.Clear();
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            SendObstacleHit(peerID, map, mode, num, pos, type, name, dmg);
+        }
+    }
+
+    private void HandleReadyUp(int peerID)
+    {
+        if (LRV[peerID].loggedIn)
+        {
+            byte map = bitBuffer.ReadByte();
+            byte mode = bitBuffer.ReadByte();
+            int num = bitBuffer.ReadInt();
+            byte pos = bitBuffer.ReadByte();
+            bitBuffer.Clear();
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            ReadyUp(peerID, map, mode, num, pos);
+        }
+    }
+
+    private void HandleLoadedGame(int peerID)
+    {
+        if (LRV[peerID].loggedIn)
+        {
+            bitBuffer.Clear();
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            OpenGate(peerID);
+        }
+    }
+
+    // lobby stuff
+    private void HandleCreateLobby(int peerID)
+    {
+        if (LRV[peerID].loggedIn)
+        {
+            byte map = bitBuffer.ReadByte();
+            byte gamemode = bitBuffer.ReadByte();
+            string name = bitBuffer.ReadString();
+            string pass = bitBuffer.ReadString();
+            bitBuffer.Clear();
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            CreateLobby(peerID, map, gamemode, name, pass);
+        }
+    }
+
+    private void HandleCreateChallenge(int peerID)
+    {
+        if (LRV[peerID].loggedIn)
+        {
+            try
+            {
+                byte map = bitBuffer.ReadByte();
+                int seed = bitBuffer.ReadInt();
+                string pass = bitBuffer.ReadString();
+                string name = playerName[peerID];
+                //checks if a seed exists
+                using (MySqlConnection sqlConn = DBH.NewConnection())
+                {
+                    sqlConn.Open();
+                    Debug.Log("checking challenges");
+                    try
+                    {
+                        command = @"SELECT seed
+                          FROM challenges WHERE seed = @seed";
+
+                        using (MySqlCommand check = new MySqlCommand(command, sqlConn))
+                        {
+                            check.Parameters.Add("@seed", MySqlDbType.Int32).Value = seed;
+                            check.ExecuteScalar().ToString();
+                            Debug.Log("seed exists");
+                        }
+
+                    }
+                    // seed doesn't exist
+                    catch
+                    {
+                        command = "INSERT into challenges (seed, creator)" +
+                            "VALUES (@seed, @creator)";
+                        using (MySqlCommand create = new MySqlCommand(command, sqlConn))
+                        {
+                            create.Parameters.Add("@seed", MySqlDbType.Int32).Value = seed;
+                            create.Parameters.Add("@creator", MySqlDbType.Int32).Value = name;
+                            create.ExecuteScalar().ToString();
+                            Debug.Log("created challenge");
+                        }
+                    }
+                }
+                //CreateChallenge(peerID, map, seed);
+            }
+            catch (MySqlException ex)
+            {
+                //unable to connect
+                Debug.Log(ex.Message);
+            }
+        }
+    }
+
+    private void HandleQuickPlay(int peerID)
+    {
+        if (LRV[peerID].loggedIn)
+        {
+            byte map = bitBuffer.ReadByte(); // 0 = meadow etc..
+            bitBuffer.Clear();
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            QuickPlay(peerID, map);
+        }
+    }
+
+    private void HandleConnectLobby(int peerID)
+    {
+        if (LRV[peerID].loggedIn)
+        {
+            byte map = bitBuffer.ReadByte();
+            byte mode = bitBuffer.ReadByte();
+            int num = bitBuffer.ReadInt();
+            string pass = bitBuffer.ReadString();
+            bitBuffer.Clear();
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            ConnectLobby(peerID, map, mode, num, pass);
+        }
+    }
+
+    private void HandleLeaveLobby(int peerID)
+    {
+        if (LRV[peerID].loggedIn)
+        {
+            byte map = bitBuffer.ReadByte();
+            byte mode = bitBuffer.ReadByte();
+            int num = bitBuffer.ReadInt();
+            byte pos = bitBuffer.ReadByte();
+            bitBuffer.Clear();
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            LeaveLobby(peerID, map, mode, num, pos);
+        }
+    }
+
+    private void HandleKick(int peerID)
+    {
+        if (LRV[peerID].loggedIn)
+        {
+            byte map = bitBuffer.ReadByte();
+            byte mode = bitBuffer.ReadByte();
+            int num = bitBuffer.ReadInt();
+            byte pos = bitBuffer.ReadByte();
+            bitBuffer.Clear();
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            KickPlayer(peerID, map, mode, num, pos);
+        }
+    }
+
+    // login stuff
+    private void HandlePlayAsGuest(int peerID)
+    {
+        if (!LRV[peerID].loggedIn)
+        {
+            name = bitBuffer.ReadString(); 
+            if (name.Length > 16)
+                name = name.Substring(0, 16);
+            bitBuffer.Clear();
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            LoginSuccess(peerID, name, 1);
+            LRV[peerID].loggedIn = true;
+            LRV[peerID].isGuest = true;
+        }
+    }
+
+    private void HandleLogin(int peerID)
+    {
+        try
+        {
+            if (!LRV[peerID].loggedIn)
+            {
+                // open connection to db
+                using (MySqlConnection sqlConn = DBH.NewConnection())
+                {
+                    sqlConn.Open();
+
+                    userORemail = bitBuffer.ReadString();
+                    pass = bitBuffer.ReadString();
+                    bitBuffer.Clear();
+                    Array.Clear(byteBuffer, 0, byteBuffer.Length);
+
+                    if (userORemail.Contains("@") && userORemail.Contains("."))
+                    {
+                        email = userORemail;
+                        user = "";
+                        command = @"SELECT id, username, password, email, loginIP, name, xp, skin, rocks, bTokens, timePlayed, soloWins, fourPWins, powerup
+                            FROM user WHERE (email = @email)";
+                    }
+                    else
+                    {
+                        user = userORemail;
+                        email = "";
+                        command = @"SELECT id, username, password, email, loginIP, name, xp, skin, rocks, bTokens, timePlayed, soloWins, fourPWins, powerup
+                            FROM user WHERE (username = @username)";
+                    }
+                    int xp = 0;
+                    byte skin = 0;
+                    int rocks = 0;
+                    int boulderTokens = 0;
+                    int timePlayed = 0;
+                    int soloWins = 0;
+                    int fourPlayerWins = 0;
+                    byte powerup = 0;
+                    loginSkins.Clear();
+                    loginSkins.Add(0);
+                    loginPowerups.Clear();
+                    loginPowerups.Add(0);
+
+                    using (MySqlCommand login = new MySqlCommand(command, sqlConn))
+                    {
+                        login.Parameters.Add("@email", MySqlDbType.VarChar).Value = email;
+                        login.Parameters.Add("@username", MySqlDbType.VarChar).Value = user;
+                        using (MySqlDataReader reader = login.ExecuteReader())
+                        {
+                            if (reader.Read()) //if we are able to find and read the row containing the user/email & pass
+                            {
+                                // get all stored player values
+                                dbIP = reader.GetString("loginIP");
+                                dbPass = reader.GetString("password");
+                                if (Convert.IsDBNull(reader["name"]))
+                                {
+                                    name = null;
+                                }
+                                else
+                                {
+                                    name = reader.GetString("name");
+                                }
+                                LRV[peerID].id = reader.GetInt32("id");
+                                xp = reader.GetInt32("xp");
+                                skin = reader.GetByte("skin");
+                                powerup = reader.GetByte("powerup");
+                                rocks = reader.GetInt32("rocks");
+                                boulderTokens = reader.GetInt32("bTokens");
+                                timePlayed = reader.GetInt32("timePlayed");
+                                soloWins = reader.GetInt32("soloWins");
+                                fourPlayerWins = reader.GetInt32("fourPWins");
+                            }
+                            else
+                            {
+                                HandleRegister(peerID);
+                                return;
+                            }
+                        }
+                    }
+                    if (pass == dbPass)
+                    {
+                        if (name != null)
+                        {
+                            if (dbIP == "none") // if not logged in yet
+                            {
+                                #region get skins and powerups
+                                //////////// GET ALL SKINS ////////////////////////////////////////////
+                                command = @"SELECT * FROM userSkins WHERE (playerID = @id)";
+                                using (MySqlCommand getSkins = new MySqlCommand(command, sqlConn))
+                                {
+                                    getSkins.Parameters.Add("@id", MySqlDbType.Int32).Value = LRV[peerID].id;
+                                    using (MySqlDataReader reader = getSkins.ExecuteReader())
+                                    {
+                                        if (reader.Read()) //if we are able to find and read the row containing the id
+                                        {
+                                            int numColumns = reader.FieldCount;
+                                            for (byte i = 1; i < numColumns; i++) // i starts at one (skip playerID)
+                                            {
+                                                if (reader.GetByte(i) == 1) // 1 = owned, 0 = not owned
+                                                    loginSkins.Add(i);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Debug.Log("id: " + LRV[peerID].id + ", does not exist in userSkins table.");
+                                        }
+                                    }
+                                }
+
+                                //////////// GET ALL POWERUPS ////////////////////////////////////////////
+                                command = @"SELECT * FROM userPowerups WHERE (playerID = @id)";
+                                using (MySqlCommand getPowerups = new MySqlCommand(command, sqlConn))
+                                {
+                                    getPowerups.Parameters.Add("@id", MySqlDbType.Int32).Value = LRV[peerID].id;
+                                    using (MySqlDataReader reader = getPowerups.ExecuteReader())
+                                    {
+                                        if (reader.Read()) //if we are able to find and read the row containing the id
+                                        {
+                                            int numColumns = reader.FieldCount;
+                                            for (byte i = 1; i < numColumns; i++) // i starts at one (skip playerID)
+                                            {
+                                                if (reader.GetByte(i) == 1) // 1 = owned, 0 = not owned
+                                                    loginPowerups.Add(i);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Debug.Log("id: " + LRV[peerID].id + ", does not exist in powerups table.");
+                                        }
+                                    }
+                                }
+                                #endregion
+
+                                // send login to player, and send all stored values
+                                LoginSuccess(peerID, name, xp, rocks, boulderTokens, timePlayed, soloWins, fourPlayerWins, loginSkins, loginPowerups, skin, powerup);
+                                LRV[peerID].loggedIn = true;
+
+                                //store ip of user connecting, prevents double logins.
+                                command = "UPDATE user SET loginIP = @ip WHERE id = @id";
+                                using (MySqlCommand setLoginIP = new MySqlCommand(command, sqlConn))
+                                {
+                                    setLoginIP.Parameters.Add("@ip", MySqlDbType.VarChar).Value = ip[peerID];
+                                    setLoginIP.Parameters.Add("@id", MySqlDbType.VarChar).Value = LRV[peerID].id;
+                                    setLoginIP.ExecuteNonQuery();
+                                }
+                            }
+                            else // logged in already
+                            {
+                                LoginRegisterResponse(peerID, 5);
+                            }
+                        }
+                        else // still needs to create name (register)
+                        {
+                            LoginRegisterResponse(peerID, 1);
+                        }
+
+
+                    }
+                    else if (dbPass != null)
+                    {
+                        LoginRegisterResponse(peerID, 2);
+                    }
+                }
+            }
+        }
+        catch (MySqlException ex)
+        {
+            //unable to connect
+            Debug.Log(ex.Message);
+        }
+    }
+
+    private void HandleRegister(int peerID)
+    {
+        // open connection
+        using (MySqlConnection sqlConn = DBH.NewConnection())
+        {
+            //enter the username, password, and email of the new user into the database
+            command = "INSERT into user (username, password, email, loginIP)" +
+                "VALUES (@username, @password, @email, @ip)";
+            using (MySqlCommand register = new MySqlCommand(command, sqlConn))
+            {
+                register.Parameters.Add("@username", MySqlDbType.VarChar).Value = user;
+                register.Parameters.Add("@email", MySqlDbType.VarChar).Value = email;
+                register.Parameters.Add("@password", MySqlDbType.VarChar).Value = pass;
+                register.Parameters.Add("@ip", MySqlDbType.VarChar).Value = ip[peerID];
+                register.ExecuteNonQuery();
+            }
+
+            // set the skins of new user to their defaults
+            command = "INSERT into userSkins () VALUES ()";
+            using (MySqlCommand addSkins = new MySqlCommand(command, sqlConn))
+            {
+                addSkins.ExecuteNonQuery();
+            }
+            // set the powerups of new user to their defaults
+            command = "INSERT into userPowerups () VALUES ()";
+            using (MySqlCommand addPowerups = new MySqlCommand(command, sqlConn))
+            {
+                addPowerups.ExecuteNonQuery();
+            }
+
+            //get id of new user
+            command = @"SELECT id
+                FROM user WHERE (username = @username) AND (email = @email)";
+            using (MySqlCommand getID = new MySqlCommand(command, sqlConn))
+            {
+                getID.Parameters.Add("@username", MySqlDbType.VarChar).Value = user;
+                getID.Parameters.Add("@email", MySqlDbType.VarChar).Value = email;
+                LRV[peerID].id = (int)getID.ExecuteScalar();
+            }
+            LoginRegisterResponse(peerID, 1);
+        }
+    }
+
+    private void HandleCreateChar(int peerID)
+    {
+        if (!LRV[peerID].loggedIn)
+        {
+            name = bitBuffer.ReadString();
+            if (name.Length > 16)
+                name = name.Substring(0, 16);
+            bitBuffer.Clear();
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            using (MySqlConnection sqlConn = DBH.NewConnection())
+            {
+                sqlConn.Open();
+
+                command = "UPDATE user SET name = @name WHERE name IS NULL AND id = @id";
+
+                using (MySqlCommand update = new MySqlCommand(command, sqlConn))
+                {
+                    update.Parameters.Add("@name", MySqlDbType.VarChar).Value = name;
+                    update.Parameters.Add("@id", MySqlDbType.VarChar).Value = LRV[peerID].id;
+                    update.ExecuteNonQuery();
+                    LoginSuccess(peerID, name, 2);
+                    LRV[peerID].loggedIn = true;
+                    return;
+                }
+                Debug.Log("could not name acc");
+                return;
+            }
+            Debug.Log("could not connect to db");
+        }
+    }
+
+    private void HandlePurchaseItem(int peerID)
+    {
+        if (LRV[peerID].loggedIn)
+        {
+            byte itemType = bitBuffer.ReadByte();
+            byte itemID = bitBuffer.ReadByte();
+            bitBuffer.Clear();
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            PurchaseItem(peerID, itemType, itemID);
+        }
+    }
+
+    public void UnlockSkin(int peerID, int itemID)
+    {
+        if (LRV[peerID].loggedIn)
+        {
+            if (!LRV[peerID].isGuest)
+            {
+                try
+                {
+                    using (MySqlConnection sqlConn = DBH.NewConnection())
+                    {
+                        sqlConn.Open();
+                        switch (itemID)
+                        {
+                            case 1:
+                                command = "UPDATE userSkins SET 1s = 1 WHERE playerID = @id";
+                                using (MySqlCommand addPowerup = new MySqlCommand(command, sqlConn))
+                                {
+                                    addPowerup.Parameters.Add("@id", MySqlDbType.VarChar).Value = LRV[peerID].id;
+                                    addPowerup.ExecuteNonQuery();
+                                }
+                                break;
+
+                            case 2:
+
+                                command = "UPDATE userSkins SET 2s = 1 WHERE playerID = @id";
+                                using (MySqlCommand addPowerup = new MySqlCommand(command, sqlConn))
+                                {
+                                    addPowerup.Parameters.Add("@id", MySqlDbType.VarChar).Value = LRV[peerID].id;
+                                    addPowerup.ExecuteNonQuery();
+                                }
+                                break;
+
+                            case 3:
+                                command = "UPDATE userSkins SET 3s = 1 WHERE playerID = @id";
+                                using (MySqlCommand addPowerup = new MySqlCommand(command, sqlConn))
+                                {
+                                    addPowerup.Parameters.Add("@id", MySqlDbType.VarChar).Value = LRV[peerID].id;
+                                    addPowerup.ExecuteNonQuery();
+                                }
+                                break;
+
+                            case 4:
+                                command = "UPDATE userSkins SET 4s = 1 WHERE playerID = @id";
+                                using (MySqlCommand addPowerup = new MySqlCommand(command, sqlConn))
+                                {
+                                    addPowerup.Parameters.Add("@id", MySqlDbType.VarChar).Value = LRV[peerID].id;
+                                    addPowerup.ExecuteNonQuery();
+                                }
+                                break;
+
+                            case 5:
+                                command = "UPDATE userSkins SET 5s = 1 WHERE playerID = @id";
+                                using (MySqlCommand addPowerup = new MySqlCommand(command, sqlConn))
+                                {
+                                    addPowerup.Parameters.Add("@id", MySqlDbType.VarChar).Value = LRV[peerID].id;
+                                    addPowerup.ExecuteNonQuery();
+                                }
+                                break;
+
+                            case 6:
+                                command = "UPDATE userSkins SET 6s = 1 WHERE playerID = @id";
+                                using (MySqlCommand addPowerup = new MySqlCommand(command, sqlConn))
+                                {
+                                    addPowerup.Parameters.Add("@id", MySqlDbType.VarChar).Value = LRV[peerID].id;
+                                    addPowerup.ExecuteNonQuery();
+                                }
+                                break;
+
+                            case 7:
+                                command = "UPDATE userSkins SET 7s = 1 WHERE playerID = @id";
+                                using (MySqlCommand addPowerup = new MySqlCommand(command, sqlConn))
+                                {
+                                    addPowerup.Parameters.Add("@id", MySqlDbType.VarChar).Value = LRV[peerID].id;
+                                    addPowerup.ExecuteNonQuery();
+                                }
+                                break;
+                                
+                        }
+                    }
+                }
+                catch (MySqlException ex)
+                {
+                    //unable to connect
+                    Debug.Log(ex.Message);
+                }
+            }
+        }
+    }
+
+    public void UnlockPowerup(int peerID, int itemID)
+    {
+        if (LRV[peerID].loggedIn)
+        {
+            if (!LRV[peerID].isGuest)
+            {
+                try
+                {
+                    using (MySqlConnection sqlConn = DBH.NewConnection())
+                    {
+                        sqlConn.Open();
+                        switch (itemID)
+                        {
+                            case 1:
+                                command = "UPDATE userPowerups SET 1p = 1 WHERE playerID = @id";
+                                using (MySqlCommand addPowerup = new MySqlCommand(command, sqlConn))
+                                {
+                                    addPowerup.Parameters.Add("@id", MySqlDbType.VarChar).Value = LRV[peerID].id;
+                                    addPowerup.ExecuteNonQuery();
+                                }
+                                break;
+
+                            case 2:
+                                command = "UPDATE userPowerups SET 2p = 1 WHERE playerID = @id";
+                                using (MySqlCommand addPowerup = new MySqlCommand(command, sqlConn))
+                                {
+                                    addPowerup.Parameters.Add("@id", MySqlDbType.VarChar).Value = LRV[peerID].id;
+                                    addPowerup.ExecuteNonQuery();
+                                }
+                                break;
+
+
+
+                            case 3:
+                                command = "UPDATE userPowerups SET 3p = 1 WHERE playerID = @id";
+                                using (MySqlCommand addPowerup = new MySqlCommand(command, sqlConn))
+                                {
+                                    addPowerup.Parameters.Add("@id", MySqlDbType.VarChar).Value = LRV[peerID].id;
+                                    addPowerup.ExecuteNonQuery();
+                                }
+                                break;
+
+                            case 4:
+                                command = "UPDATE userPowerups SET 4p = 1 WHERE playerID = @id";
+                                using (MySqlCommand addPowerup = new MySqlCommand(command, sqlConn))
+                                {
+                                    addPowerup.Parameters.Add("@id", MySqlDbType.VarChar).Value = LRV[peerID].id;
+                                    addPowerup.ExecuteNonQuery();
+                                }
+                                break;
+
+                            case 5:
+                                command = "UPDATE userPowerups SET 5p = 1 WHERE playerID = @id";
+                                using (MySqlCommand addPowerup = new MySqlCommand(command, sqlConn))
+                                {
+                                    addPowerup.Parameters.Add("@id", MySqlDbType.VarChar).Value = LRV[peerID].id;
+                                    addPowerup.ExecuteNonQuery();
+                                }
+                                break;
+
+                            case 6:
+                                command = "UPDATE userPowerups SET 6p = 1 WHERE playerID = @id";
+                                using (MySqlCommand addPowerup = new MySqlCommand(command, sqlConn))
+                                {
+                                    addPowerup.Parameters.Add("@id", MySqlDbType.VarChar).Value = LRV[peerID].id;
+                                    addPowerup.ExecuteNonQuery();
+                                }
+                                break;
+
+                            case 7:
+                                command = "UPDATE userPowerups SET 7p = 1 WHERE playerID = @id";
+                                using (MySqlCommand addPowerup = new MySqlCommand(command, sqlConn))
+                                {
+                                    addPowerup.Parameters.Add("@id", MySqlDbType.VarChar).Value = LRV[peerID].id;
+                                    addPowerup.ExecuteNonQuery();
+                                }
+                                break;
+                        }
+                    }
+                }
+                catch (MySqlException ex)
+                {
+                    //unable to connect
+                    Debug.Log(ex.Message);
+                }
+            }
+        }
+    }
+
+    private void HandleEquipItem(int peerID)
+    {
+        if (LRV[peerID].loggedIn)
+        {
+            byte itemType = bitBuffer.ReadByte();
+            byte itemID = bitBuffer.ReadByte();
+            bitBuffer.Clear();
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            EquipItem(peerID, itemType, itemID);
+        }
+    }
+
+
+    public void ClientDisconnected(int peerID, int xp, int rocks, int bTokens, byte skin, byte powerup) // called from serverT when client disconnects
+    {
+        if (LRV[peerID].loggedIn)
+        {
+            if (!LRV[peerID].isGuest)
+            {
+                try
+                {
+                    using (MySqlConnection sqlConn = DBH.NewConnection())
+                    {
+                        sqlConn.Open();
+                        Debug.Log("updateing db logout");
+                        command = "UPDATE user SET loginIP = @ip, xp = @xp, rocks = @rocks, bTokens = @bTokens, skin = @skin, powerup = @powerup WHERE id = @id";
+                        using (MySqlCommand savePlayerValues = new MySqlCommand(command, sqlConn))
+                        {
+                            savePlayerValues.Parameters.Add("@id", MySqlDbType.VarChar).Value = LRV[peerID].id;
+                            savePlayerValues.Parameters.Add("@ip", MySqlDbType.VarChar).Value = "none";
+                            savePlayerValues.Parameters.Add("@xp", MySqlDbType.VarChar).Value = xp;
+                            savePlayerValues.Parameters.Add("@rocks", MySqlDbType.VarChar).Value = rocks;
+                            savePlayerValues.Parameters.Add("@bTokens", MySqlDbType.VarChar).Value = bTokens;
+                            savePlayerValues.Parameters.Add("@skin", MySqlDbType.VarChar).Value = skin;
+                            savePlayerValues.Parameters.Add("@powerup", MySqlDbType.VarChar).Value = powerup;
+                            savePlayerValues.ExecuteNonQuery();
+                        }
+                    }
+                }
+                catch (MySqlException ex)
+                {
+                    //unable to connect
+                    Debug.Log(ex.Message);
+                }
+            }
+        }
+    }
+
+
+    #endregion
+
+    #region Old serverTest
+    // game stuff
+    IEnumerator StopSendingMovement(byte map, byte mode, int num)
+    {
+        yield return fiveSeconds;
         StopCoroutine(lac.SendMovement[map, mode, num]);
     }
 
@@ -375,7 +1000,7 @@ public class serverTest : MonoBehaviour
     {
         while (true)
         {
-            yield return new WaitForSeconds(1);
+            yield return oneSecond;
             lac.matchTime[map, mode, num]++;
         }
     }
@@ -384,515 +1009,29 @@ public class serverTest : MonoBehaviour
     {
         while (true)
         {
-            ByteBuffer1 buffer4 = new ByteBuffer1();
-            buffer4.WriteByte(2);
-            buffer4.WriteByte(lac.slots[map, mode, num]);
+            bitBuffer.AddByte(2);
+            bitBuffer.AddByte(lac.slots[map, mode, num]);
             for (int i = 0; i <= lac.slots[map, mode, num]; i++)
             {
-                buffer4.WriteVector3(playerPosition[lac.id[map, mode, num, i]]); 
-                buffer4.WriteVector3(playerRotation[lac.id[map, mode, num, i]]);
+                bitBuffer.AddUInt(playerPosition[lac.id[map, mode, num, i]].x);
+                bitBuffer.AddUInt(playerPosition[lac.id[map, mode, num, i]].y);
+                bitBuffer.AddUInt(playerPosition[lac.id[map, mode, num, i]].z);
+                
+                bitBuffer.AddByte(playerRotation[lac.id[map, mode, num, i]].m);
+                bitBuffer.AddInt(playerRotation[lac.id[map, mode, num, i]].a);
+                bitBuffer.AddInt(playerRotation[lac.id[map, mode, num, i]].b);
+                bitBuffer.AddInt(playerRotation[lac.id[map, mode, num, i]].c);
             }
-            byte[] data = buffer4.ToArray();
+            bitBuffer.ToArray(byteBuffer);
             Packet packet = new Packet();
-            packet.Create(data, data.Length, PacketFlags.Unsequenced);
-            buffer4.Dispose();
+            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Unsequenced);
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            bitBuffer.Clear();
             for (int i = 0; i <= lac.slots[map, mode, num]; i++)
             {
                 peers[lac.id[map, mode, num, i]].Send(3, ref packet);
             }
-            yield return new WaitForSeconds(0.1f);
-        }
-    }
-
-    public void LoginRegisterResponse(int peerID, byte response) // 1=registered, 2=badlogin, 3=toomanyloginattempts, 4=toomanyconnections, 5=alreadyLoggedIn, 6=tooManyRegistrations, 7=spammingRegistrations
-    {
-        Debug.Log("response = " + response);
-        ByteBuffer1 buffer = new ByteBuffer1();
-        buffer.WriteByte(8);
-        buffer.WriteByte(response);
-        Packet packet = new Packet();
-        byte[] data = buffer.ToArray();
-        packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-        peers[peerID].Send(0, ref packet);
-        
-        buffer.Dispose();
-    }
-
-    public void LoginSuccess(int peerID, string name, int xp, int rocks, int boulderTokens, int timePlayed, int soloWins, int fourPlayerWins, List<byte> skins, List<byte> powerups, byte skin, byte powerup)
-    {
-        LoadAllLobbies(peerID);
-        playerName[peerID] = name;
-        this.xp[peerID] = xp;
-        this.rocks[peerID] = rocks;
-        this.boulderTokens[peerID] = boulderTokens;
-        this.timePlayed[peerID] = timePlayed;
-        this.soloWins[peerID] = soloWins;
-        this.fourPlayerWins[peerID] = fourPlayerWins;
-        this.skin[peerID] = skin;
-        this.skins[peerID] = skins;
-        this.powerups[peerID] = powerups;
-        this.powerup[peerID] = powerup;
-
-
-        ByteBuffer1 buffer = new ByteBuffer1();
-        buffer.WriteByte(7);
-        buffer.WriteByte(0);
-        buffer.WriteString(name);
-        buffer.WriteInteger(xp);
-        buffer.WriteInteger(rocks);
-        buffer.WriteInteger(boulderTokens);
-        buffer.WriteInteger(timePlayed);
-        buffer.WriteInteger(soloWins);
-        buffer.WriteInteger(fourPlayerWins);
-
-        buffer.WriteByte((byte)skins.Count);
-        buffer.WriteByte((byte)powerups.Count);
-        buffer.WriteBytes(skins.ToArray());
-        buffer.WriteBytes(powerups.ToArray());
-        buffer.WriteByte(skin);
-        buffer.WriteByte(powerup);
-        Packet packet = new Packet();
-        byte[] data = buffer.ToArray();
-        packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-        peers[peerID].Send(0, ref packet);
-        buffer.Dispose();      
-    }
-
-    // for newly created accs or for guests
-    public void LoginSuccess(int peerID, string name, byte guest)
-    {
-        LoadAllLobbies(peerID);
-
-        playerName[peerID] = name;
-        this.xp[peerID] = 1000;
-        this.rocks[peerID] = 0;
-        this.boulderTokens[peerID] = 0;
-        this.timePlayed[peerID] = 0;
-        this.soloWins[peerID] = 0;
-        this.fourPlayerWins[peerID] = 0;
-        this.skin[peerID] = 0;
-        this.skins[peerID].Clear();this.skins[peerID].Add(0);
-        this.powerups[peerID].Clear();this.powerups[peerID].Add(0);
-        this.powerup[peerID] = 0;
-
-        ByteBuffer1 buffer = new ByteBuffer1();
-        buffer.WriteByte(7);
-        buffer.WriteByte(guest); // 2 = newly registered ,since 0 = login, and 1 = guest
-        buffer.WriteString(name);
-        Packet packet = new Packet();
-        byte[] data = buffer.ToArray();
-        packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-        peers[peerID].Send(0, ref packet);
-        buffer.Dispose();
-    }
-
-    public void AllowLoginRegister(int peerID)
-    {
-        ByteBuffer1 buffer = new ByteBuffer1();
-        buffer.WriteByte(9);
-        Packet packet = new Packet();
-        byte[] data = buffer.ToArray();
-        packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-        peers[peerID].Send(0, ref packet);
-        
-        buffer.Dispose();
-    }
-
-    public void QuickPlay(int peerID, byte map)
-    {
-        if(!playerInLobby[peerID])
-        {
-            byte gamemode;
-            int num;
-
-            if(lac.FindFirstAvailableLobby(peerID, map, out gamemode, out num))
-            {
-                ConnectLobby(peerID, map, gamemode, num, "");
-            }
-            else
-            {
-                ByteBuffer1 buffer = new ByteBuffer1();
-                buffer.WriteByte(23);
-                Debug.Log("map = " + map);
-                buffer.WriteByte(map);
-                Packet packet = new Packet();
-                byte[] data = buffer.ToArray();
-                packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-                peers[peerID].Send(1, ref packet);
-                buffer.Dispose();
-                
-            }
-        }
-    }
-
-
-    public void ConnectLobby(int peerID, byte map, byte gamemode, int num, string pass)
-    {
-        if (!playerInLobby[peerID])
-        {
-            if (!lac.LobbyNull(map, gamemode, num))
-            {
-                if(!lac.gameStarted[map,gamemode,num])
-                { 
-                    string gameName;
-                    string gamePass;
-                    byte slots;
-                    lac.ReturnGame(map, gamemode, num, out gameName, out gamePass, out slots);
-                    Debug.Log(peerID);
-                    // if game isnt full
-                    if (slots < ((gamemode + 1) * 2) - 1) 
-                    {
-                        if (pass == gamePass)
-                        {
-                            playerInLobby[peerID] = true;
-                            //assign player to slot
-                            slots++;
-                            lac.slots[map, gamemode, num] = slots;
-                            lac.id[map, gamemode, num, slots] = peerID;
-
-
-                            // tell client it successfully connected to lobby
-                            ByteBuffer1 buffer2 = new ByteBuffer1();
-                            buffer2.WriteByte(10);
-                            buffer2.WriteByte(map);
-                            buffer2.WriteByte(gamemode);
-                            buffer2.WriteInteger(num);
-                            buffer2.WriteString(gameName);
-                            buffer2.WriteByte(slots);
-                            Packet packet2 = new Packet();
-                            byte[] data2 = buffer2.ToArray();
-                            packet2.Create(data2, data2.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-                            peers[peerID].Send(1, ref packet2);
-
-                            buffer2.Dispose();
-
-                            UpdateLobbySlots(map, gamemode, num, slots);
-
-                            
-                            // tell all clients that player connected(below)
-                            ByteBuffer1 buffer = new ByteBuffer1();
-                            buffer.WriteByte(12);
-                            buffer.WriteString(playerName[peerID]);
-                            buffer.WriteInteger(xp[peerID]);
-                            //buffer.WriteByte(skin[peerID]);
-                            Debug.Log("slots = " + slots);
-                            buffer.WriteByte(slots);
-                            Packet packet = new Packet();
-                            byte[] data = buffer.ToArray();
-                            packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-
-                            for (byte i = 0; i <= slots; i++)
-                            {
-                                int loopPeerID = lac.id[map, gamemode, num, i];
-                                Debug.Log(peerID);
-
-                                if (i != slots)
-                                {
-                                    // tell each client in lobby about new client                       
-                                    peers[loopPeerID].Send(1, ref packet);
-
-                                    // tell new client information about each client in lobby
-                                    ByteBuffer1 buffer1 = new ByteBuffer1();
-                                    buffer1.WriteByte(12);
-                                    buffer1.WriteString(playerName[loopPeerID]);
-                                    Debug.Log(playerName[loopPeerID]);
-                                    buffer1.WriteInteger(xp[loopPeerID]);
-                                    //buffer1.WriteByte(skin[loopPeerID]);
-                                    buffer1.WriteByte(i);
-                                    Packet packet1 = new Packet();
-                                    byte[] data1 = buffer1.ToArray();
-                                    packet1.Create(data1, data1.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-                                    peers[peerID].Send(1, ref packet1);
-
-                                    buffer1.Dispose();
-                                }
-
-                            }
-                            buffer.Dispose();
-                            if (slots == (2 * (gamemode + 1)) - 1)
-                            {
-                                SendStartGame(map, gamemode, num);
-                            }
-                        }
-                        else
-                        {
-                            /// pass wrong
-                            ByteBuffer1 buffer = new ByteBuffer1();
-                            buffer.WriteByte(24);
-                            Packet packet = new Packet();
-                            byte[] data = buffer.ToArray();
-                            packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-                            peers[peerID].Send(1, ref packet);
-                            buffer.Dispose();
-                        }
-                    }
-                    else
-                    {
-                        // lobby full
-                        ByteBuffer1 buffer = new ByteBuffer1();
-                        buffer.WriteByte(19);
-                        buffer.WriteByte(2);
-                        Packet packet = new Packet();
-                        byte[] data = buffer.ToArray();
-                        packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-                        peers[peerID].Send(1, ref packet);
-                        buffer.Dispose();
-                    }
-                }
-                else
-                {
-                    // game started
-                    ByteBuffer1 buffer = new ByteBuffer1();
-                    buffer.WriteByte(19);
-                    buffer.WriteByte(1);
-                    Packet packet = new Packet();
-                    byte[] data = buffer.ToArray();
-                    packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-                    peers[peerID].Send(1, ref packet);
-                    buffer.Dispose();
-                        
-                }
-            }
-            else
-            {
-                // lobby doesnt exist
-                ByteBuffer1 buffer = new ByteBuffer1();
-                buffer.WriteByte(19);
-                buffer.WriteByte(0);
-                Packet packet = new Packet();
-                byte[] data = buffer.ToArray();
-                packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-                peers[peerID].Send(1, ref packet);
-                buffer.Dispose();
-            }
-        }
-           
-    }
-
-    void SendStartGame(byte map, byte gamemode, int num)
-    {
-        lac.StartGame(map, gamemode, num);
-        StartCoroutine(lac.SendMovement[map, gamemode, num]); // start timer
-        // tell clients in lobby to start game
-        ByteBuffer1 buffer4 = new ByteBuffer1();
-        buffer4.WriteByte(3);
-        buffer4.WriteInteger(lac.gameSeed[map, gamemode, num]);
-
-        buffer4.WriteByte(lac.slots[map, gamemode, num]);
-        for (int i = 0; i <= lac.slots[map, gamemode, num]; i++)
-        {
-            buffer4.WriteByte(skin[lac.id[map, gamemode, num, i]]);        // write players skins
-
-            // zero player at start so it wont go to his last game position
-            playerPosition[lac.id[map, gamemode, num, i]] = Vector3.zero; 
-            playerRotation[lac.id[map, gamemode, num, i]] = Vector3.zero;
-        }
-       
-
-        Packet packet4 = new Packet();
-        byte[] data4 = buffer4.ToArray();
-        packet4.Create(data4, data4.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-
-        for (byte i = 0; i <= lac.slots[map,gamemode,num]; i++)
-        {
-            int peerID = lac.id[map, gamemode, num, i];
-            peers[peerID].Send(1, ref packet4);
-        }
-
-        // updates lobby list on clients to tell em game started and cant be joined
-        ByteBuffer1 buffer1 = new ByteBuffer1();
-        buffer1.WriteByte(26);
-        buffer1.WriteByte(map);
-        buffer1.WriteByte(gamemode);
-        buffer1.WriteInteger(num);
-        buffer1.WriteByte(1);
-        byte[] data1 = buffer1.ToArray();
-        SendPacketToAllClientsLoggedIn(data1, PacketFlags.Reliable | PacketFlags.Unsequenced, 1); 
-        lac.gameStarted[map, gamemode, num] = true;
-    }
-
-
-    public void ReadyUp(int peerID, byte map, byte gamemode, int num, byte pos)
-    {
-        if (lac.id[map, gamemode, num, pos] == peerID) // verifies pos in lobby
-        {
-            lac.ready[map, gamemode, num, pos] = true;     
-            
-            // notify clients in lobby that player readied
-            ByteBuffer1 buffer = new ByteBuffer1();
-            buffer.WriteByte(27);
-            buffer.WriteByte(pos);
-            Packet packet = new Packet();
-            byte[] data = buffer.ToArray();
-            packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-            for(int i = 0; i <= lac.slots[map, gamemode, num]; i++)
-            {
-                peers[lac.id[map,gamemode,num,i]].Send(1, ref packet);
-            }
-            buffer.Dispose();
-
-            // start game if all ready
-            if (lac.AllPlayersReady(map,gamemode,num))
-            {
-                SendStartGame(map, gamemode, num);
-            }
-        }
-    }
-
-    public void LeaveLobby(int peerID, byte map, byte gamemode, int num, byte pos)
-    {
-        if (lac.id[map, gamemode, num, pos] == peerID) // verifies pos in lobby
-        {
-            // subtracts one from slots, opening up a slot for another client
-            lac.LeaveLobby(map, gamemode, num, pos);
-            playerInLobby[peerID] = false;
-            // tell other clients that we left
-            SendToOthersLeftLobby(map, gamemode, num, pos);
-            // notify client that he succeffully left lobby
-            ByteBuffer1 buffer = new ByteBuffer1();
-            buffer.WriteByte(13);
-            Packet packet = new Packet();
-            byte[] data = buffer.ToArray();
-            packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-            peers[peerID].Send(1, ref packet);
-            Debug.Log("player " + playerName[peerID] + " left");
-            buffer.Dispose();
-            CheckIfGameDone(map, gamemode, num);
-        }
-    }
-
-    public void KickPlayer(int peerID, byte map, byte gamemode, int num, byte pos)
-    {
-        Debug.Log("sent kick");
-        if (lac.id[map, gamemode, num, 0] == peerID) // checks to see if it is lobby owner who is sending packet
-        {
-            Debug.Log("sent kick");
-            int kickedPlayerID = lac.id[map, gamemode, num, pos];
-            // subtracts one from slots, opening up a slot for another client
-            lac.LeaveLobby(map, gamemode, num, pos);
-            playerInLobby[kickedPlayerID] = false;
-
-            // tell other clients that he left
-            SendToOthersLeftLobby(map, gamemode, num, pos);
-
-            // notify client that he was kicked from lobby
-            ByteBuffer1 buffer = new ByteBuffer1();
-            buffer.WriteByte(18);
-            Packet packet = new Packet();
-            byte[] data = buffer.ToArray();
-            packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-            peers[kickedPlayerID].Send(1, ref packet);
-            
-            buffer.Dispose();
-            Debug.Log("sent kick");
-        }
-
-    }
-
-    public void CreateLobby(int peerID, byte map, byte gamemode, string name, string pass)
-    {
-        if (!playerInLobby[peerID])
-        {
-            byte Protected = 0;
-            // if no name was set, create default name
-            if (name == "")
-            {
-                name = playerName[peerID] + "'s game";
-            }
-            // if it is password protected
-            if (pass != "")
-            {
-                Protected = 1;
-            }
-
-            int i = lac.CreateLobby(peerID, map, gamemode, playerName[peerID], name, pass); //creates lobby and returns lobby id
-
-            // tell client he successfully created lobby
-            playerInLobby[peerID] = true;
-            ByteBuffer1 buffer = new ByteBuffer1();
-            buffer.WriteByte(10);
-            buffer.WriteByte(map);
-            buffer.WriteByte(gamemode);
-            buffer.WriteInteger(i);
-            buffer.WriteString(name);
-            buffer.WriteByte(0);
-            //buffer.WriteInteger(gamemode);
-            Packet packet = new Packet();
-            byte[] data = buffer.ToArray();
-            packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-            peers[peerID].Send(1, ref packet);
-
-            // update clients with new lobby info
-            ByteBuffer1 buffer1 = new ByteBuffer1();
-            buffer1.WriteByte(16);
-            buffer1.WriteByte(map);
-            buffer1.WriteByte(gamemode);
-            buffer1.WriteInteger(i);
-            buffer1.WriteString(name);
-            buffer1.WriteString(playerName[peerID]);
-            buffer1.WriteByte(Protected); // tell clients that it is password protected
-            buffer1.WriteByte(0); // tell clients that game not started
-            buffer1.WriteByte(0); // one person in lobby (owner)
-            byte[] data1 = buffer1.ToArray();
-            SendPacketToAllClientsLoggedIn(data1, PacketFlags.Reliable | PacketFlags.Unsequenced, 1);
-            buffer.Dispose();
-            buffer1.Dispose();
-            
-        }
-    }
-
-    public void CreateChallenge(int peerID, byte map, int seed)
-    {
-        ByteBuffer1 buffer = new ByteBuffer1();
-        buffer.WriteByte(14);
-        buffer.WriteByte(map);
-        buffer.WriteInteger(seed);
-        Packet packet = new Packet();
-        packet.Create(buffer.ToArray());
-        peers[peerID].Send(1, ref packet);
-        buffer.Dispose();
-    }
-
-    public void LoadAllLobbies(int peerID)
-    {
-        for (byte m = 0; m < maps; m++)
-        {
-            for (byte g = 0; g < gamemodes; g++)
-            {
-                for (int n = 0; n < lobbies; n++)
-                {
-                    string gameName;
-                    string gamePass;
-                    byte slots;
-                    byte Protected = 0;
-                    // if lobby is not null
-                    if (!lac.LobbyNull(m, g, n))
-                    {
-                        lac.ReturnGame(m, g, n, out gameName, out gamePass, out slots);
-
-                        if (gamePass != "")
-                        {
-                            Protected = 1;
-                        }
-                        // update client with new lobby info
-                        ByteBuffer1 buffer1 = new ByteBuffer1();
-                        buffer1.WriteByte(16);
-                        buffer1.WriteByte(m);
-                        buffer1.WriteByte(g);
-                        buffer1.WriteInteger(n);
-                        buffer1.WriteString(gameName);
-                        buffer1.WriteString(playerName[lac.id[m,g,n,0]]);
-                        buffer1.WriteByte(Protected); // tell clients that it is password protected
-                        buffer1.WriteByte(Convert.ToByte(lac.gameStarted[m, g, n]));
-                        buffer1.WriteByte(slots);
-                        Packet packet = new Packet();
-                        byte[] data = buffer1.ToArray();
-                        packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-                        peers[peerID].Send(0, ref packet);
-                        buffer1.Dispose();                        
-                    }
-                }
-            }
+            yield return oneTenthSecond;
         }
     }
 
@@ -907,13 +1046,13 @@ public class serverTest : MonoBehaviour
             // set player has loaded
             lac.loaded[map, mode, lobby, slot] = true;
             // tell other players he has loaded
-            ByteBuffer1 buffer1 = new ByteBuffer1();
-            buffer1.WriteByte(11);
-            buffer1.WriteByte(slot);
-            byte[] data1 = buffer1.ToArray();
-            buffer1.Dispose();
+            bitBuffer.AddByte(11);
+            bitBuffer.AddByte(slot);
+            bitBuffer.ToArray(byteBuffer);
             Packet packet1 = new Packet();
-            packet1.Create(data1, data1.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+            packet1.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            bitBuffer.Clear();
             for (int i = 0; i <= lac.slots[map, mode, lobby]; i++)
             {
                 peers[lac.id[map, mode, lobby, i]].Send(2, ref packet1);
@@ -928,37 +1067,31 @@ public class serverTest : MonoBehaviour
                     // if player has not loaded
                     if (lac.loaded[map, mode, lobby, n] == false)
                     {
-                        Debug.Log("player " + n + " is not ready");
                         return;
                     }
-                    Debug.Log("player " + n + " is ready");
                 }
 
                 // open gate on all clients if all players are loaded
-
-                ByteBuffer1 buffer = new ByteBuffer1();
-                buffer.WriteByte(6);
+                bitBuffer.AddByte(6);
                 Packet packet = new Packet();
-                byte[] data = buffer.ToArray();
-                packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-
+                bitBuffer.ToArray(byteBuffer);
+                packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                Array.Clear(byteBuffer, 0, byteBuffer.Length);
+                bitBuffer.Clear();
                 for (int i = 0; i <= lac.slots[map, mode, lobby]; i++)
                 {
-                    Debug.Log("sent open gate");
                     peers[lac.id[map, mode, lobby, i]].Send(2, ref packet);
                     lac.loaded[map, mode, lobby, i] = false; // prevents this method from being activated when not supposed to
                 }
-                buffer.Dispose();
                 StartCoroutine(lac.matchTimer[map, mode, lobby]);
-            }           
+            }
         }
     }
 
-
-    public void UpdatePlayerPosition(int peerID, Vector3 position, Vector3 rotation)
+    public void UpdatePlayerPosition(int peerID, CompressedVector3 position, CompressedQuaternion rotation)
     {
         playerPosition[peerID] = position;
-        playerRotation[peerID] = rotation;     
+        playerRotation[peerID] = rotation;
     }
     /*
     public void SendPlayerPosition(int peerID, byte map, byte mode, int num, byte pos, Vector3 position, Vector3 rotation)
@@ -981,23 +1114,22 @@ public class serverTest : MonoBehaviour
             buffer4.Dispose();           
         }
     }*/
-
     public void SendExplode(int peerID, byte map, byte mode, int num, byte pos)
     {
         if (lac.id[map, mode, num, pos] == peerID) //verifies client is in lobby, and is in correct 'pos'
         {
-            ByteBuffer1 buffer4 = new ByteBuffer1();
-            buffer4.WriteByte(20);
-            buffer4.WriteByte(pos);
+            bitBuffer.AddByte(20);
+            bitBuffer.AddByte(pos);
             Packet packet = new Packet();
-            byte[] data = buffer4.ToArray();
-            packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+            bitBuffer.ToArray(byteBuffer);
+            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            bitBuffer.Clear();
 
             for (int i = 0; i <= lac.slots[map, mode, num]; i++)
             {
                 if (i != pos)
                 {
-                    Debug.Log("sent dead, pos = " + pos + ", sending to client: " + i);
                     peers[lac.id[map, mode, num, i]].Send(2, ref packet);
                 }
             }
@@ -1008,20 +1140,42 @@ public class serverTest : MonoBehaviour
     {
         if (lac.id[map, mode, num, pos] == peerID) //verifies client is in lobby, and is in correct 'pos'
         {
-            ByteBuffer1 buffer4 = new ByteBuffer1();
-            buffer4.WriteByte(31);
-            buffer4.WriteByte(pos);
-            buffer4.WriteByte(powerup[peerID]);
+            bitBuffer.AddByte(31);
+            bitBuffer.AddByte(pos);
+            bitBuffer.AddByte(powerup[peerID]);
             Packet packet = new Packet();
-            byte[] data = buffer4.ToArray();
-            packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-
+            bitBuffer.ToArray(byteBuffer);
+            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            bitBuffer.Clear();
             for (int i = 0; i <= lac.slots[map, mode, num]; i++)
             {
                 if (i != pos)
                 {
                     peers[lac.id[map, mode, num, i]].Send(2, ref packet);
                 }
+            }
+        }
+    }
+
+    public void SendObstacleHit(int peerID, byte map, byte mode, int num, byte pos, byte type, string name, byte dmg)
+    {
+        if (lac.id[map, mode, num, pos] == peerID) //verifies client is in lobby, and is in correct 'pos'
+        {
+            bitBuffer.AddByte(21);
+            bitBuffer.AddByte(type);
+            bitBuffer.AddString(name);
+            bitBuffer.AddByte(dmg);
+            Packet packet = new Packet();
+            bitBuffer.ToArray(byteBuffer);
+            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable);
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            bitBuffer.Clear();
+
+            for (int i = 0; i <= lac.slots[map, mode, num]; i++)
+            {
+                if (i != pos)
+                    peers[lac.id[map, mode, num, i]].Send(2, ref packet);
             }
         }
     }
@@ -1034,6 +1188,652 @@ public class serverTest : MonoBehaviour
             lac.distance[map, mode, num, pos] = distance;
             CheckIfGameDone(map, mode, num);
         }
+    }
+
+    public void ReadyUp(int peerID, byte map, byte gamemode, int num, byte pos)
+    {
+        if (lac.id[map, gamemode, num, pos] == peerID) // verifies pos in lobby
+        {
+            lac.ready[map, gamemode, num, pos] = true;
+
+            // notify clients in lobby that player readied
+            bitBuffer.AddByte(27);
+            bitBuffer.AddByte(pos);
+            Packet packet = new Packet();
+            bitBuffer.ToArray(byteBuffer);
+            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            bitBuffer.Clear();
+            for (int i = 0; i <= lac.slots[map, gamemode, num]; i++)
+            {
+                peers[lac.id[map, gamemode, num, i]].Send(1, ref packet);
+            }
+
+            // start game if all ready
+            if (lac.AllPlayersReady(map, gamemode, num))
+            {
+                SendStartGame(map, gamemode, num);
+            }
+        }
+    }
+
+    // lobby stuff
+    public void QuickPlay(int peerID, byte map)
+    {
+        if (!playerInLobby[peerID])
+        {
+            byte gamemode;
+            int num;
+
+            if (lac.FindFirstAvailableLobby(peerID, map, out gamemode, out num))
+            {
+                ConnectLobby(peerID, map, gamemode, num, "");
+            }
+            else
+            {
+                bitBuffer.AddByte(23);
+                bitBuffer.AddByte(map);
+                Packet packet = new Packet();
+                bitBuffer.ToArray(byteBuffer);
+                packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                peers[peerID].Send(1, ref packet);
+                Array.Clear(byteBuffer, 0, byteBuffer.Length);
+                bitBuffer.Clear();
+            }
+        }
+    }
+
+    public void ConnectLobby(int peerID, byte map, byte gamemode, int num, string pass)
+    {
+        if (!playerInLobby[peerID])
+        {
+            if (!lac.LobbyNull(map, gamemode, num))
+            {
+                if (!lac.gameStarted[map, gamemode, num])
+                {
+                    string gameName;
+                    string gamePass;
+                    byte slots;
+                    lac.ReturnGame(map, gamemode, num, out gameName, out gamePass, out slots);
+                    Debug.Log(peerID);
+                    // if game isnt full
+                    if (slots < ((gamemode + 1) * 2) - 1)
+                    {
+                        if (pass == gamePass)
+                        {
+                            playerInLobby[peerID] = true;
+                            //assign player to slot
+                            slots++;
+                            lac.slots[map, gamemode, num] = slots;
+                            lac.id[map, gamemode, num, slots] = peerID;
+
+                            // tell client it successfully connected to lobby
+                            bitBuffer.AddByte(10);
+                            bitBuffer.AddByte(map);
+                            bitBuffer.AddByte(gamemode);
+                            bitBuffer.AddInt(num);
+                            bitBuffer.AddString(gameName);
+                            bitBuffer.AddByte(slots);
+                            Packet packet2 = new Packet();
+                            bitBuffer.ToArray(byteBuffer);
+                            packet2.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                            peers[peerID].Send(1, ref packet2);
+                            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+                            bitBuffer.Clear();
+
+                            UpdateLobbySlots(map, gamemode, num, slots);
+
+
+                            // tell all clients that player connected(below)
+                            bitBuffer.AddByte(12);
+                            bitBuffer.AddString(playerName[peerID]);
+                            bitBuffer.AddInt(xp[peerID]);
+                            //buffer.WriteByte(skin[peerID]);
+                            bitBuffer.AddByte(slots);
+                            Packet packet = new Packet();
+                            bitBuffer.ToArray(byteBuffer);
+                            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+                            bitBuffer.Clear();
+
+                            for (byte i = 0; i <= slots; i++)
+                            {
+                                int loopPeerID = lac.id[map, gamemode, num, i];
+                                if (i != slots)
+                                {
+                                    // tell each client in lobby about new client                       
+                                    peers[loopPeerID].Send(1, ref packet);
+
+                                    // tell new client information about each client in lobby
+                                    bitBuffer.AddByte(12);
+                                    bitBuffer.AddString(playerName[loopPeerID]);
+                                    bitBuffer.AddInt(xp[loopPeerID]);
+                                    //buffer1.WriteByte(skin[loopPeerID]);
+                                    bitBuffer.AddByte(i);
+                                    Packet packet1 = new Packet();
+                                    bitBuffer.ToArray(byteBuffer);
+                                    packet1.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                                    peers[peerID].Send(1, ref packet1);
+                                    Array.Clear(byteBuffer, 0, byteBuffer.Length);
+                                    bitBuffer.Clear();
+                                }
+
+                            }
+                            if (slots == (2 * (gamemode + 1)) - 1)
+                            {
+                                SendStartGame(map, gamemode, num);
+                            }
+                        }
+                        else
+                        {
+                            /// pass wrong
+                            bitBuffer.AddByte(24);
+                            Packet packet = new Packet();
+                            bitBuffer.ToArray(byteBuffer);
+                            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                            peers[peerID].Send(1, ref packet);
+                            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+                            bitBuffer.Clear();
+                        }
+                    }
+                    else
+                    {
+                        // lobby full
+                        bitBuffer.AddByte(19);
+                        bitBuffer.AddByte(2);
+                        Packet packet = new Packet();
+                        bitBuffer.ToArray(byteBuffer);
+                        packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                        Array.Clear(byteBuffer, 0, byteBuffer.Length);
+                        bitBuffer.Clear();
+                    }
+                }
+                else
+                {
+                    // game started
+                    bitBuffer.AddByte(19);
+                    bitBuffer.AddByte(1);
+                    Packet packet = new Packet();
+                    bitBuffer.ToArray(byteBuffer);
+                    packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                    peers[peerID].Send(1, ref packet);
+                    Array.Clear(byteBuffer, 0, byteBuffer.Length);
+                    bitBuffer.Clear();
+                }
+            }
+            else
+            {
+                // lobby doesnt exist
+                bitBuffer.AddByte(19);
+                bitBuffer.AddByte(0);
+                Packet packet = new Packet();
+                bitBuffer.ToArray(byteBuffer);
+                packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                peers[peerID].Send(1, ref packet);
+                Array.Clear(byteBuffer, 0, byteBuffer.Length);
+                bitBuffer.Clear();
+            }
+        }
+
+    }
+
+    public void LeaveLobby(int peerID, byte map, byte gamemode, int num, byte pos)
+    {
+        if (lac.id[map, gamemode, num, pos] == peerID) // verifies pos in lobby
+        {
+            // subtracts one from slots, opening up a slot for another client
+            lac.LeaveLobby(map, gamemode, num, pos);
+            playerInLobby[peerID] = false;
+            // tell other clients that we left
+            SendToOthersLeftLobby(map, gamemode, num, pos);
+            // notify client that he succeffully left lobby
+            bitBuffer.AddByte(13);
+            Packet packet = new Packet();
+            bitBuffer.ToArray(byteBuffer);
+            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+            peers[peerID].Send(1, ref packet);
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            bitBuffer.Clear();
+            CheckIfGameDone(map, gamemode, num);
+        }
+    }
+
+    public void KickPlayer(int peerID, byte map, byte gamemode, int num, byte pos)
+    {
+        if (lac.id[map, gamemode, num, 0] == peerID) // checks to see if it is lobby owner who is sending packet
+        {
+            int kickedPlayerID = lac.id[map, gamemode, num, pos];
+            // subtracts one from slots, opening up a slot for another client
+            lac.LeaveLobby(map, gamemode, num, pos);
+            playerInLobby[kickedPlayerID] = false;
+
+            // tell other clients that he left
+            SendToOthersLeftLobby(map, gamemode, num, pos);
+
+            // notify client that he was kicked from lobby
+            bitBuffer.AddByte(18);
+            Packet packet = new Packet();
+            bitBuffer.ToArray(byteBuffer);
+            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+            peers[kickedPlayerID].Send(1, ref packet);
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            bitBuffer.Clear();
+        }
+
+    }
+
+    public void CreateLobby(int peerID, byte map, byte gamemode, string name, string pass)
+    {
+        if (!playerInLobby[peerID])
+        {
+            byte Protected = 0;
+            // if no name was set, create default name
+            if (String.IsNullOrEmpty(name))
+            {
+                name = playerName[peerID] + lac.gameDefaultNameSuffix;
+            }
+            // if it is password protected
+            if (!String.IsNullOrEmpty(pass))
+            {
+                Protected = 1;
+            }
+
+            int i = lac.CreateLobby(peerID, map, gamemode, playerName[peerID], name, pass); //creates lobby and returns lobby id
+
+            // tell client he successfully created lobby
+            playerInLobby[peerID] = true;
+            bitBuffer.AddByte(10);
+            bitBuffer.AddByte(map);
+            bitBuffer.AddByte(gamemode);
+            bitBuffer.AddInt(i);
+            bitBuffer.AddString(name);
+            bitBuffer.AddByte(0);
+            //buffer.WriteInteger(gamemode);
+            Packet packet = new Packet();
+            bitBuffer.ToArray(byteBuffer);
+            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+            peers[peerID].Send(1, ref packet);
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            bitBuffer.Clear();
+
+            // update clients with new lobby info
+            bitBuffer.AddByte(16);
+            bitBuffer.AddByte(map);
+            bitBuffer.AddByte(gamemode);
+            bitBuffer.AddInt(i);
+            bitBuffer.AddString(name);
+            bitBuffer.AddString(playerName[peerID]);
+            bitBuffer.AddByte(Protected); // tell clients that it is password protected
+            bitBuffer.AddByte(0); // tell clients that game not started
+            bitBuffer.AddByte(0); // one person in lobby (owner)
+            bitBuffer.ToArray(byteBuffer);
+            SendPacketToAllClientsLoggedIn(PacketFlags.Reliable | PacketFlags.Unsequenced, 1);
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            bitBuffer.Clear();
+        }
+    }
+
+    public void CreateChallenge(int peerID, byte map, int seed)
+    {
+        bitBuffer.AddByte(14);
+        bitBuffer.AddByte(map);
+        bitBuffer.AddInt(seed);
+        bitBuffer.ToArray(byteBuffer);
+        Packet packet = new Packet();
+        packet.Create(byteBuffer);
+        peers[peerID].Send(1, ref packet);
+        Array.Clear(byteBuffer, 0, byteBuffer.Length);
+        bitBuffer.Clear();
+    }
+
+    public void LoadAllLobbies(int peerID)
+    {
+        for (byte m = 0; m < maps; m++)
+        {
+            for (byte g = 0; g < gamemodes; g++)
+            {
+                for (int n = 0; n < lobbies; n++)
+                {
+                    string gameName;
+                    string gamePass;
+                    byte slots;
+                    byte Protected = 0;
+                    // if lobby is not null
+                    if (!lac.LobbyNull(m, g, n))
+                    {
+                        lac.ReturnGame(m, g, n, out gameName, out gamePass, out slots);
+
+                        if (!String.IsNullOrEmpty(gamePass))
+                        {
+                            Protected = 1;
+                        }
+                        // update client with new lobby info
+                        bitBuffer.AddByte(16);
+                        bitBuffer.AddByte(m);
+                        bitBuffer.AddByte(g);
+                        bitBuffer.AddInt(n);
+                        bitBuffer.AddString(gameName);
+                        bitBuffer.AddString(playerName[lac.id[m, g, n, 0]]);
+                        bitBuffer.AddByte(Protected); // tell clients that it is password protected
+                        bitBuffer.AddByte(Convert.ToByte(lac.gameStarted[m, g, n]));
+                        bitBuffer.AddByte(slots);
+                        Packet packet = new Packet();
+                        bitBuffer.ToArray(byteBuffer);
+                        packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                        Array.Clear(byteBuffer, 0, byteBuffer.Length);
+                        bitBuffer.Clear();
+                    }
+                }
+            }
+        }
+    }
+
+    public void SendToOthersLeftLobby(byte map, byte gamemode, int num, byte pos)
+    {
+        byte slots = lac.slots[map, gamemode, num];
+
+        // lobby is empty, tell clients to delete it
+        if (lac.gameName[map, gamemode, num] == null)
+        {
+            bitBuffer.AddByte(25);
+            bitBuffer.AddByte(map);
+            bitBuffer.AddByte(gamemode);
+            bitBuffer.AddInt(num);
+            bitBuffer.ToArray(byteBuffer);
+            SendPacketToAllClientsLoggedIn(PacketFlags.Reliable | PacketFlags.Unsequenced, 1);
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            bitBuffer.Clear();
+            StopCoroutine(lac.matchTimer[map, gamemode, num]);
+            StopCoroutine(lac.SendMovement[map, gamemode, num]);
+        }
+        else // lobby still has members, update it
+        {
+            bitBuffer.AddByte(4);
+            bitBuffer.AddByte(pos);
+            Packet packet = new Packet();
+            bitBuffer.ToArray(byteBuffer);
+            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable);
+            Array.Clear(byteBuffer, 0, byteBuffer.Length);
+            bitBuffer.Clear();
+            for (int i = 0; i <= slots; i++)
+            {
+                peers[lac.id[map, gamemode, num, i]].Send(2, ref packet);
+            }
+
+            UpdateLobbySlots(map, gamemode, num, slots);
+        }
+
+    }
+
+    private void UpdateLobbySlots(byte map, byte gamemode, int num, byte slots)
+    {
+        // notify all clients that a slot was emptied or filled
+        bitBuffer.AddByte(17);
+        bitBuffer.AddByte(map);
+        bitBuffer.AddByte(gamemode);
+        bitBuffer.AddInt(num);
+        bitBuffer.AddByte(slots);
+        bitBuffer.AddString(playerName[lac.id[map, gamemode, num, 0]]);
+        bitBuffer.ToArray(byteBuffer);
+        SendPacketToAllClientsLoggedIn(PacketFlags.Reliable | PacketFlags.Unsequenced, 1);
+        Array.Clear(byteBuffer, 0, byteBuffer.Length);
+        bitBuffer.Clear();
+    }
+
+    // login stuff
+    public void LoginRegisterResponse(int peerID, byte response) // 1=registered, 2=badlogin, 3=toomanyloginattempts, 4=toomanyconnections, 5=alreadyLoggedIn, 6=tooManyRegistrations, 7=spammingRegistrations
+    {
+        bitBuffer.AddByte(8);
+        bitBuffer.AddByte(response);
+        Packet packet = new Packet();
+        bitBuffer.ToArray(byteBuffer);
+        packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+        peers[peerID].Send(0, ref packet);
+        Array.Clear(byteBuffer, 0, byteBuffer.Length);
+        bitBuffer.Clear();
+    }
+
+    public void LoginSuccess(int peerID, string name, int xp, int rocks, int boulderTokens, int timePlayed, int soloWins, int fourPlayerWins, List<byte> skins, List<byte> powerups, byte skin, byte powerup)
+    {
+        LoadAllLobbies(peerID);
+        playerName[peerID] = name;
+        this.xp[peerID] = xp;
+        this.rocks[peerID] = rocks;
+        this.boulderTokens[peerID] = boulderTokens;
+        this.timePlayed[peerID] = timePlayed;
+        this.soloWins[peerID] = soloWins;
+        this.fourPlayerWins[peerID] = fourPlayerWins;
+        this.skin[peerID] = skin;
+        this.skins[peerID] = skins;
+        this.powerups[peerID] = powerups;
+        this.powerup[peerID] = powerup;
+
+
+        bitBuffer.AddByte(7);
+        bitBuffer.AddByte(0);
+        bitBuffer.AddString(name);
+        bitBuffer.AddInt(xp);
+        bitBuffer.AddInt(rocks);
+        bitBuffer.AddInt(boulderTokens);
+        bitBuffer.AddInt(timePlayed);
+        bitBuffer.AddInt(soloWins);
+        bitBuffer.AddInt(fourPlayerWins);
+
+        bitBuffer.AddByte((byte)skins.Count);
+        bitBuffer.AddByte((byte)powerups.Count);
+        foreach (byte skinID in skins)
+            bitBuffer.AddByte(skinID);
+        foreach (byte powerupID in powerups)
+            bitBuffer.AddByte(powerupID);
+        bitBuffer.AddByte(skin);
+        bitBuffer.AddByte(powerup);
+        Packet packet = new Packet();
+        bitBuffer.ToArray(byteBuffer);
+        packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+        peers[peerID].Send(0, ref packet);
+        Array.Clear(byteBuffer, 0, byteBuffer.Length);
+        bitBuffer.Clear();
+    }
+
+    public void LoginSuccess(int peerID, string name, byte guest)    // for newly created accs or for guests
+    {
+        LoadAllLobbies(peerID);
+
+        playerName[peerID] = name;
+        this.xp[peerID] = 1000;
+        this.rocks[peerID] = 0;
+        this.boulderTokens[peerID] = 0;
+        this.timePlayed[peerID] = 0;
+        this.soloWins[peerID] = 0;
+        this.fourPlayerWins[peerID] = 0;
+        this.skin[peerID] = 0;
+        if(this.skins[peerID] == null)
+            this.skins[peerID] = new List<byte>();
+        else
+            this.skins[peerID].Clear();
+        this.skins[peerID].Add(0);
+
+        if (this.powerups[peerID] == null)
+            this.powerups[peerID] = new List<byte>();
+        else
+            this.powerups[peerID].Clear();
+        this.powerups[peerID].Add(0);
+        this.powerup[peerID] = 0;
+
+        bitBuffer.AddByte(7);
+        bitBuffer.AddByte(guest); // 2 = newly registered ,since 0 = login, and 1 = guest
+        bitBuffer.AddString(name);
+        Packet packet = new Packet();
+        bitBuffer.ToArray(byteBuffer);
+        packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+        peers[peerID].Send(0, ref packet);
+        Array.Clear(byteBuffer, 0, byteBuffer.Length);
+        bitBuffer.Clear();
+    }
+
+    public void AllowLoginRegister(int peerID)
+    {
+        bitBuffer.AddByte(9);
+        Packet packet = new Packet();
+        bitBuffer.ToArray(byteBuffer);
+        packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+        peers[peerID].Send(0, ref packet);
+        Array.Clear(byteBuffer, 0, byteBuffer.Length);
+        bitBuffer.Clear();
+    }
+
+    // items
+    public void PurchaseItem(int peerID, byte itemType, byte itemID)
+    {
+        if (itemType == 0)
+        {
+            if (boulderTokens[peerID] >= skinPrices[itemID])
+            {
+                if (!SkinOwned(peerID, itemID))
+                {
+                    skins[peerID].Add(itemID);
+                    UnlockSkin(peerID, itemID);
+                    boulderTokens[peerID] -= skinPrices[itemID];
+                }
+                else return;
+            }
+            else return;
+        }
+        else if (itemType == 1)
+        {
+            if (rocks[peerID] >= powerupPrices[itemID])
+            {
+                if (!PowerupOwned(peerID, itemID))
+                {
+                    powerups[peerID].Add(itemID);
+                    UnlockPowerup(peerID, itemID);
+                    rocks[peerID] -= powerupPrices[itemID];
+                }
+                else return;
+            }
+            else return;
+        }
+        else if (itemType == 2)
+        {
+            if (rocks[peerID] >= tokenRockPrices[itemID])
+            {
+                boulderTokens[peerID] += tokenRockQuantities[itemID];
+                rocks[peerID] -= tokenRockPrices[itemID];
+            }
+            else return;
+        }
+
+        bitBuffer.AddByte(29);
+        bitBuffer.AddByte(1);
+        bitBuffer.AddByte(itemType);
+        bitBuffer.AddByte(itemID);
+        Packet packet = new Packet();
+        bitBuffer.ToArray(byteBuffer);
+        packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+        peers[peerID].Send(1, ref packet);
+        Array.Clear(byteBuffer, 0, byteBuffer.Length);
+        bitBuffer.Clear();
+    }
+
+    public void EquipItem(int peerID, byte itemType, byte itemID)
+    {
+        if (itemType == 0)
+        {
+            if (SkinOwned(peerID, itemID)) // if he does
+                skin[peerID] = itemID; // update player to new skin       
+            else
+                return;
+        }
+        else if (itemType == 1)
+        {
+            // Check to see if player has powerup
+            if (PowerupOwned(peerID, itemID)) // if he does
+                powerup[peerID] = itemID; // simply save the equiped item so when player exits game we can save it in database      
+            else
+                return;
+        }
+
+        // tell client he equiped item
+        bitBuffer.AddByte(30);
+        bitBuffer.AddByte(itemType);
+        bitBuffer.AddByte(itemID);
+        Packet packet = new Packet();
+        bitBuffer.ToArray(byteBuffer);
+        packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+        peers[peerID].Send(1, ref packet);
+        Array.Clear(byteBuffer, 0, byteBuffer.Length);
+        bitBuffer.Clear();
+    }
+
+    void CheckForUnlocks(int peerID)
+    {
+        if (xp[peerID] >= 1150)
+        {
+
+        }
+    }
+
+    bool SkinOwned(int peerID, byte skin)
+    {
+        foreach (byte skinID in skins[peerID])
+        {
+            if (skinID == skin)
+                return true;
+        }
+        return false;
+    }
+
+    bool PowerupOwned(int peerID, byte powerup)
+    {
+        foreach (byte powerupID in powerups[peerID])
+        {
+            if (powerupID == powerup)
+                return true;
+        }
+        return false;
+    }
+
+    // misc
+    void SendStartGame(byte map, byte gamemode, int num)
+    {
+        lac.StartGame(map, gamemode, num);
+        StartCoroutine(lac.SendMovement[map, gamemode, num]); // start timer
+        // tell clients in lobby to start game
+        bitBuffer.AddByte(3);
+        bitBuffer.AddInt(lac.gameSeed[map, gamemode, num]);
+
+        bitBuffer.AddByte(lac.slots[map, gamemode, num]);
+        for (int i = 0; i <= lac.slots[map, gamemode, num]; i++)
+        {
+            bitBuffer.AddByte(skin[lac.id[map, gamemode, num, i]]);        // write players skins
+
+            // zero player at start so it wont go to his last game position
+            playerPosition[lac.id[map, gamemode, num, i]] = new CompressedVector3(0,0,0);
+            playerRotation[lac.id[map, gamemode, num, i]] = SmallestThree.Compress(Quaternion.identity);
+        }
+        Packet packet4 = new Packet();
+        bitBuffer.ToArray(byteBuffer);
+        packet4.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+        Array.Clear(byteBuffer, 0, byteBuffer.Length);
+        bitBuffer.Clear();
+
+        for (byte i = 0; i <= lac.slots[map, gamemode, num]; i++)
+        {
+            int peerID = lac.id[map, gamemode, num, i];
+            peers[peerID].Send(1, ref packet4);
+        }
+
+        // updates lobby list on clients to tell em game started and cant be joined
+        bitBuffer.AddByte(26);
+        bitBuffer.AddByte(map);
+        bitBuffer.AddByte(gamemode);
+        bitBuffer.AddInt(num);
+        bitBuffer.AddByte(1);
+        bitBuffer.ToArray(byteBuffer);
+        SendPacketToAllClientsLoggedIn(PacketFlags.Reliable | PacketFlags.Unsequenced, 1);
+        lac.gameStarted[map, gamemode, num] = true;
+        Array.Clear(byteBuffer, 0, byteBuffer.Length);
+        bitBuffer.Clear();
     }
 
     public void CheckIfGameDone(byte map, byte mode, int num)
@@ -1072,7 +1872,7 @@ public class serverTest : MonoBehaviour
                                 if (mode == 0)
                                     soloWins[lac.id[map, mode, num, i]]++;
                                 else if (mode == 1)
-                                    fourPlayerWins[lac.id[map, mode, num, i]]++;                                  
+                                    fourPlayerWins[lac.id[map, mode, num, i]]++;
                             }
 
                             xp[lac.id[map, mode, num, i]] += (scoreConstant * lac.matchTime[map, mode, num]);
@@ -1085,301 +1885,63 @@ public class serverTest : MonoBehaviour
                 }
 
                 // (updates game list) tell clients that the game has finished 
-                ByteBuffer1 buffer1 = new ByteBuffer1();
-                buffer1.WriteByte(26);
-                buffer1.WriteByte(map);
-                buffer1.WriteByte(mode);
-                buffer1.WriteInteger(num);
-                buffer1.WriteByte(0);
-                byte[] data1 = buffer1.ToArray();
-                SendPacketToAllClientsLoggedIn(data1, PacketFlags.Reliable | PacketFlags.Unsequenced, 1);
-
+                bitBuffer.AddByte(26);
+                bitBuffer.AddByte(map);
+                bitBuffer.AddByte(mode);
+                bitBuffer.AddInt(num);
+                bitBuffer.AddByte(0);
+                bitBuffer.ToArray(byteBuffer);
+                SendPacketToAllClientsLoggedIn(PacketFlags.Reliable | PacketFlags.Unsequenced, 1);
+                Array.Clear(byteBuffer, 0, byteBuffer.Length);
+                bitBuffer.Clear();
 
                 // tells clients in lobby game is done
-                ByteBuffer1 buffer = new ByteBuffer1();
-                buffer.WriteByte(28);
-                if (lac.slots[map, mode, num] < (((mode + 1) * 2) - 1)) 
-                    buffer.WriteByte(0); // not enough players
+                bitBuffer.AddByte(28);
+                if (lac.slots[map, mode, num] < (((mode + 1) * 2) - 1))
+                    bitBuffer.AddByte(0); // not enough players
                 else
-                    buffer.WriteByte(1); // enough players
-                buffer.WriteInteger(lac.matchTime[map, mode, num]);
-                buffer.WriteByte((byte)firstPlacePlayerPos);
-                byte[] data = buffer.ToArray();
+                    bitBuffer.AddByte(1); // enough players
+                bitBuffer.AddInt(lac.matchTime[map, mode, num]);
+                bitBuffer.AddByte((byte)firstPlacePlayerPos);
+                bitBuffer.ToArray(byteBuffer);
                 Packet packet = new Packet();
-                packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                Array.Clear(byteBuffer, 0, byteBuffer.Length);
+                bitBuffer.Clear();
                 for (int i = 0; i <= lac.slots[map, mode, num]; i++)
                 {
                     peers[lac.id[map, mode, num, i]].Send(2, ref packet);
                 }
-                
+
             }
         }
     }
 
-    public void SendObstacleHit(int peerID, byte map, byte mode, int num, byte pos, byte type, string name, float dmg)
-    {
-        if (lac.id[map, mode, num, pos] == peerID) //verifies client is in lobby, and is in correct 'pos'
-        {
-            ByteBuffer1 buffer4 = new ByteBuffer1();
-            buffer4.WriteByte(21);
-            buffer4.WriteByte(type);
-            buffer4.WriteString(name);
-            buffer4.WriteFLoat(dmg);
-            Packet packet = new Packet();
-            byte[] data = buffer4.ToArray();
-            packet.Create(data, data.Length, PacketFlags.Reliable);
-
-            for (int i = 0; i <= lac.slots[map, mode, num]; i++)
-            {
-                if (i != pos)
-                    peers[lac.id[map, mode, num, i]].Send(2, ref packet);
-            }
-            
-            buffer4.Dispose();
-        }
-    }
-
-    //-------------------------------
-    // for server authoritative movement
-    public void MovePlayers(int peerID, byte map, byte mode, int num, byte pos, byte input)
-    {
-        if(lac.id[map,mode,num,pos] == peerID) //verifies client is in lobby, and is in correct 'pos'
-        {
-            //lac.game[map, mode, num].transform.Find("Boulders").GetChild(pos).GetComponent<movePlayer>().input = input; 
-        }
-    }
-    public void SendMovePlayers(byte map, byte gamemode, int num, Vector3[] position)
-    {
-        ByteBuffer1 buffer4 = new ByteBuffer1();
-        buffer4.WriteInteger(2);
-        buffer4.WriteInteger(position.Length); // informs client how many player's positions he should read
-        int i = 0;
-        foreach(Vector3 player in position)
-        {
-            buffer4.WriteVector3(position[i]);
-            i++;
-        }
-        Packet packet = new Packet();
-        packet.Create(buffer4.ToArray());
-
-        for (i = 0; i <= lac.slots[map,gamemode,num]; i++)
-        {
-            peers[lac.id[map,gamemode,num,i]].Send(0,ref packet);
-        }
-        buffer4.Dispose();      
-    }
-
-    //-------------------------------------
-
-
-    public void PurchaseItem(int peerID, byte itemType, byte itemID)
-    {
-        if (itemType == 0)
-        {
-            if (boulderTokens[peerID] >= skinPrices[itemID])
-            {
-                if (!SkinOwned(peerID, itemID))
-                {
-                    skins[peerID].Add(itemID);
-                    shd[peerID].UnlockSkin(itemID);
-                    boulderTokens[peerID] -= skinPrices[itemID];
-                }
-                else return;
-            }
-            else return;
-        }
-        else if(itemType == 1)
-        {
-            if (rocks[peerID] >= powerupPrices[itemID])
-            {
-                if (!PowerupOwned(peerID, itemID))
-                {
-                    powerups[peerID].Add(itemID);
-                    shd[peerID].UnlockPowerup(itemID);
-                    rocks[peerID] -= powerupPrices[itemID];
-                }
-                else return;
-            }
-            else return;
-        }
-        else if (itemType == 2)
-        {
-            if (rocks[peerID] >= tokenRockPrices[itemID])
-            {
-                boulderTokens[peerID] += tokenRockQuantities[itemID];
-                rocks[peerID] -= tokenRockPrices[itemID];
-            }
-            else return;
-        }
-
-        ByteBuffer1 buffer = new ByteBuffer1();
-        buffer.WriteByte(29);
-        buffer.WriteByte(1);
-        buffer.WriteByte(itemType);
-        buffer.WriteByte(itemID);
-        Packet packet = new Packet();
-        byte[] data = buffer.ToArray();
-        packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-        peers[peerID].Send(1, ref packet);
-    }
-
-
-    public void EquipItem(int peerID, byte itemType, byte itemID)
-    {
-
-        if (itemType == 0)
-        {
-
-            if (SkinOwned(peerID, itemID)) // if he does
-            {
-                skin[peerID] = itemID; // update player to new skin
-                // tell each client he changed skin
-                ByteBuffer1 buffer = new ByteBuffer1();
-                buffer.WriteByte(30);
-                buffer.WriteByte(itemType);
-                buffer.WriteByte(itemID);
-                Packet packet = new Packet();
-                byte[] data = buffer.ToArray();
-                packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-                peers[peerID].Send(1, ref packet);
-            }        
-        }
-        else if(itemType == 1)
-        {
-            // Check to see if player has powerup
-
-            if (PowerupOwned(peerID, itemID)) // if he does
-            {
-                powerup[peerID] = itemID; // simply save the equiped item so when player exits game we can save it in database
-
-                // tell each client he changed powerup
-                ByteBuffer1 buffer = new ByteBuffer1();
-                buffer.WriteByte(30);
-                buffer.WriteByte(itemType);
-                buffer.WriteByte(itemID);
-                Packet packet = new Packet();
-                byte[] data = buffer.ToArray();
-                packet.Create(data, data.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
-                peers[peerID].Send(1, ref packet);
-            }
-            
-        }
-    }
-
-
-    // notify all clients in lobby that player has left
-    public void SendToOthersLeftLobby(byte map, byte gamemode, int num, byte pos)
-    {
-        byte slots = lac.slots[map, gamemode, num];
-
-        ByteBuffer1 buffer1 = new ByteBuffer1();
-        // lobby is empty, tell client to delete it
-        if (lac.gameName[map,gamemode,num] == null)
-        {
-            buffer1.WriteByte(25);
-            buffer1.WriteByte(map);
-            buffer1.WriteByte(gamemode);
-            buffer1.WriteInteger(num);
-            byte[] data = buffer1.ToArray();
-            SendPacketToAllClientsLoggedIn(data, PacketFlags.Reliable | PacketFlags.Unsequenced, 1);
-            StopCoroutine(lac.matchTimer[map, gamemode, num]);
-            StopCoroutine(lac.SendMovement[map, gamemode, num]);
-        }
-        else // lobby still has members, update it
-        {
-            buffer1.WriteByte(4);
-            buffer1.WriteByte(pos);
-            Packet packet = new Packet();
-            byte[] data = buffer1.ToArray();
-            packet.Create(data, data.Length, PacketFlags.Reliable);
-
-            for (int i = 0; i <= slots; i++)
-            {
-                Debug.Log(i);
-                Debug.Log(lac.id[map, gamemode, num, i]);
-                peers[lac.id[map, gamemode, num, i]].Send(2, ref packet);
-            }
-
-
-            UpdateLobbySlots(map, gamemode, num, slots);
-            
-        }
-       
-       
-        buffer1.Dispose();      
-    }
-
-    private void UpdateLobbySlots(byte map, byte gamemode, int num, byte slots)
-    {
-        // notify all clients that a slot was emptied or filled
-        ByteBuffer1 buffer2 = new ByteBuffer1();
-        buffer2.WriteByte(17);
-        buffer2.WriteByte(map);
-        buffer2.WriteByte(gamemode);
-        buffer2.WriteInteger(num);
-        buffer2.WriteByte(slots);
-        int id = lac.id[map, gamemode, num, 0];
-        buffer2.WriteString(playerName[id]);        
-        byte[] data2 = buffer2.ToArray();
-        SendPacketToAllClientsLoggedIn(data2, PacketFlags.Reliable | PacketFlags.Unsequenced, 1);
-        buffer2.Dispose();
-    }
-
-
-
-    private void SendPacketToAllClientsLoggedIn(byte[] data, PacketFlags flag, byte channelID)
+    private void SendPacketToAllClientsLoggedIn(PacketFlags flag, byte channelID)
     {
         Packet packet = new Packet();
-        packet.Create(data, data.Length, flag);
+        packet.Create(byteBuffer, byteBuffer.Length, flag);
         for (int i = 0; i < maxClients; i++)
         {
-            if(!String.IsNullOrEmpty(playerName[i]))
+            if (!String.IsNullOrEmpty(playerName[i]))
             {
                 Debug.Log("index: " + i);
                 Debug.Log("playername: " + playerName[i]);
                 peers[i].Send(channelID, ref packet);
             }
-        }     
-    }
-
-    void CheckForUnlocks(int id)
-    {
-        if(xp[id] >= 1150)
-        {
-            ByteBuffer1 buffer = new ByteBuffer1();
-            buffer.WriteByte(29);
         }
     }
 
-    bool SkinOwned(int peerID, byte skin)
-    {
-        foreach(byte skinID in skins[peerID])
-        {
-            if (skinID == skin)
-                return true;
-        }
-        return false;
-    }
-
-    bool PowerupOwned(int peerID, byte powerup)
-    {
-        foreach (byte powerupID in powerups[peerID])
-        {
-            if (powerupID == powerup)
-                return true;
-        }
-        return false;
-    }
+    #endregion
 
     private void OnDestroy()
     {
-        for (int i = 0; i < shd.Length; i++)
+        for (int i = 0; i < maxClients; i++)
         {
-            if (shd[i] != null)
-                shd[i].ClientDisconnected(xp[i], rocks[i], boulderTokens[i], skin[i], powerup[i]);
+            if (peers[i].Data != null)
+                ClientDisconnected(i, xp[i], rocks[i], boulderTokens[i], skin[i], powerup[i]);
         }
         ENet.Library.Deinitialize();
         server.Dispose();
     }
-
 }
