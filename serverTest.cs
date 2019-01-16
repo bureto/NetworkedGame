@@ -26,11 +26,8 @@ public class serverTest : MonoBehaviour
     ushort port = 40000;
     protected Peer[] peers = new Peer[maxClients];
 
-    [ThreadStatic]
     private static byte[] byteBuffer = new byte[64];
-    [ThreadStatic]
     private static IntPtr[] pointerBuffer = new IntPtr[Library.maxPeers];
-    [ThreadStatic]
     private static BitBuffer bitBuffer = new BitBuffer(128);
 
     private LobbyAndChallenges lac = new LobbyAndChallenges();
@@ -190,7 +187,7 @@ public class serverTest : MonoBehaviour
         int peerID = (int)netEvent.Peer.Data;
         
         // add bytebuffer to bitBuffer & read packet id
-        bitBuffer.FromArray(byteBuffer, byteBuffer.Length - 4);
+        bitBuffer.FromArray(byteBuffer, netEvent.Packet.Length);
         byte packetNum = bitBuffer.ReadByte();
 
         // handle packet
