@@ -188,7 +188,7 @@ public class serverTest : MonoBehaviour
     {
         netEvent.Packet.CopyTo(byteBuffer);
         int peerID = (int)netEvent.Peer.Data;
-        Debug.Log("Packet received");
+        
         // add bytebuffer to bitBuffer & read packet id
         bitBuffer.FromArray(byteBuffer, byteBuffer.Length - 4);
         byte packetNum = bitBuffer.ReadByte();
