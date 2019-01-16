@@ -26,7 +26,7 @@ public class serverTest : MonoBehaviour
     ushort port = 40000;
     protected Peer[] peers = new Peer[maxClients];
 
-    private static byte[] byteBuffer = new byte[64];
+    private static byte[] byteBuffer = new byte[1024];
     private static IntPtr[] pointerBuffer = new IntPtr[Library.maxPeers];
     private static BitBuffer bitBuffer = new BitBuffer(128);
 
@@ -183,9 +183,10 @@ public class serverTest : MonoBehaviour
 
     private void ProcessPacket(Event netEvent)
     {
+        Debug.Log(netEvent.Packet.Length);
         netEvent.Packet.CopyTo(byteBuffer);
         int peerID = (int)netEvent.Peer.Data;
-        
+        Debug.Log("Packet received");
         // add bytebuffer to bitBuffer & read packet id
         bitBuffer.FromArray(byteBuffer, netEvent.Packet.Length);
         byte packetNum = bitBuffer.ReadByte();
@@ -251,7 +252,7 @@ public class serverTest : MonoBehaviour
         // clears buffers for re-use
         bitBuffer.Clear();
         Array.Clear(byteBuffer, 0, byteBuffer.Length);
-
+        server.Flush();
         netEvent.Packet.Dispose();
     }
 
@@ -946,7 +947,6 @@ public class serverTest : MonoBehaviour
         }
     }
 
-
     public void ClientDisconnected(int peerID, int xp, int rocks, int bTokens, byte skin, byte powerup) // called from serverT when client disconnects
     {
         if (LRV[peerID].loggedIn)
@@ -981,7 +981,6 @@ public class serverTest : MonoBehaviour
             }
         }
     }
-
 
     #endregion
 
@@ -1021,13 +1020,14 @@ public class serverTest : MonoBehaviour
             }
             bitBuffer.ToArray(byteBuffer);
             Packet packet = new Packet();
-            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Unsequenced);
+            packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Unsequenced | PacketFlags.UnreliableFragment);
             Array.Clear(byteBuffer, 0, byteBuffer.Length);
             bitBuffer.Clear();
             for (int i = 0; i <= lac.slots[map, mode, num]; i++)
             {
                 peers[lac.id[map, mode, num, i]].Send(3, ref packet);
             }
+            
             yield return oneTenthSecond;
         }
     }
@@ -1047,7 +1047,7 @@ public class serverTest : MonoBehaviour
             bitBuffer.AddByte(slot);
             bitBuffer.ToArray(byteBuffer);
             Packet packet1 = new Packet();
-            packet1.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+            packet1.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
             Array.Clear(byteBuffer, 0, byteBuffer.Length);
             bitBuffer.Clear();
             for (int i = 0; i <= lac.slots[map, mode, lobby]; i++)
@@ -1072,7 +1072,7 @@ public class serverTest : MonoBehaviour
                 bitBuffer.AddByte(6);
                 Packet packet = new Packet();
                 bitBuffer.ToArray(byteBuffer);
-                packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
                 Array.Clear(byteBuffer, 0, byteBuffer.Length);
                 bitBuffer.Clear();
                 for (int i = 0; i <= lac.slots[map, mode, lobby]; i++)
@@ -1119,7 +1119,7 @@ public class serverTest : MonoBehaviour
             bitBuffer.AddByte(pos);
             Packet packet = new Packet();
             bitBuffer.ToArray(byteBuffer);
-            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+            packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
             Array.Clear(byteBuffer, 0, byteBuffer.Length);
             bitBuffer.Clear();
 
@@ -1142,7 +1142,7 @@ public class serverTest : MonoBehaviour
             bitBuffer.AddByte(powerup[peerID]);
             Packet packet = new Packet();
             bitBuffer.ToArray(byteBuffer);
-            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+            packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
             Array.Clear(byteBuffer, 0, byteBuffer.Length);
             bitBuffer.Clear();
             for (int i = 0; i <= lac.slots[map, mode, num]; i++)
@@ -1165,7 +1165,7 @@ public class serverTest : MonoBehaviour
             bitBuffer.AddByte(dmg);
             Packet packet = new Packet();
             bitBuffer.ToArray(byteBuffer);
-            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable);
+            packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable);
             Array.Clear(byteBuffer, 0, byteBuffer.Length);
             bitBuffer.Clear();
 
@@ -1198,7 +1198,7 @@ public class serverTest : MonoBehaviour
             bitBuffer.AddByte(pos);
             Packet packet = new Packet();
             bitBuffer.ToArray(byteBuffer);
-            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+            packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
             Array.Clear(byteBuffer, 0, byteBuffer.Length);
             bitBuffer.Clear();
             for (int i = 0; i <= lac.slots[map, gamemode, num]; i++)
@@ -1232,7 +1232,7 @@ public class serverTest : MonoBehaviour
                 bitBuffer.AddByte(map);
                 Packet packet = new Packet();
                 bitBuffer.ToArray(byteBuffer);
-                packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
                 peers[peerID].Send(1, ref packet);
                 Array.Clear(byteBuffer, 0, byteBuffer.Length);
                 bitBuffer.Clear();
@@ -1273,7 +1273,7 @@ public class serverTest : MonoBehaviour
                             bitBuffer.AddByte(slots);
                             Packet packet2 = new Packet();
                             bitBuffer.ToArray(byteBuffer);
-                            packet2.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                            packet2.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
                             peers[peerID].Send(1, ref packet2);
                             Array.Clear(byteBuffer, 0, byteBuffer.Length);
                             bitBuffer.Clear();
@@ -1289,7 +1289,7 @@ public class serverTest : MonoBehaviour
                             bitBuffer.AddByte(slots);
                             Packet packet = new Packet();
                             bitBuffer.ToArray(byteBuffer);
-                            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                            packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
                             Array.Clear(byteBuffer, 0, byteBuffer.Length);
                             bitBuffer.Clear();
 
@@ -1309,7 +1309,7 @@ public class serverTest : MonoBehaviour
                                     bitBuffer.AddByte(i);
                                     Packet packet1 = new Packet();
                                     bitBuffer.ToArray(byteBuffer);
-                                    packet1.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                                    packet1.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
                                     peers[peerID].Send(1, ref packet1);
                                     Array.Clear(byteBuffer, 0, byteBuffer.Length);
                                     bitBuffer.Clear();
@@ -1327,7 +1327,7 @@ public class serverTest : MonoBehaviour
                             bitBuffer.AddByte(24);
                             Packet packet = new Packet();
                             bitBuffer.ToArray(byteBuffer);
-                            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                            packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
                             peers[peerID].Send(1, ref packet);
                             Array.Clear(byteBuffer, 0, byteBuffer.Length);
                             bitBuffer.Clear();
@@ -1340,7 +1340,7 @@ public class serverTest : MonoBehaviour
                         bitBuffer.AddByte(2);
                         Packet packet = new Packet();
                         bitBuffer.ToArray(byteBuffer);
-                        packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                        packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
                         Array.Clear(byteBuffer, 0, byteBuffer.Length);
                         bitBuffer.Clear();
                     }
@@ -1352,7 +1352,7 @@ public class serverTest : MonoBehaviour
                     bitBuffer.AddByte(1);
                     Packet packet = new Packet();
                     bitBuffer.ToArray(byteBuffer);
-                    packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                    packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
                     peers[peerID].Send(1, ref packet);
                     Array.Clear(byteBuffer, 0, byteBuffer.Length);
                     bitBuffer.Clear();
@@ -1365,7 +1365,7 @@ public class serverTest : MonoBehaviour
                 bitBuffer.AddByte(0);
                 Packet packet = new Packet();
                 bitBuffer.ToArray(byteBuffer);
-                packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
                 peers[peerID].Send(1, ref packet);
                 Array.Clear(byteBuffer, 0, byteBuffer.Length);
                 bitBuffer.Clear();
@@ -1387,7 +1387,7 @@ public class serverTest : MonoBehaviour
             bitBuffer.AddByte(13);
             Packet packet = new Packet();
             bitBuffer.ToArray(byteBuffer);
-            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+            packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
             peers[peerID].Send(1, ref packet);
             Array.Clear(byteBuffer, 0, byteBuffer.Length);
             bitBuffer.Clear();
@@ -1411,7 +1411,7 @@ public class serverTest : MonoBehaviour
             bitBuffer.AddByte(18);
             Packet packet = new Packet();
             bitBuffer.ToArray(byteBuffer);
-            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+            packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
             peers[kickedPlayerID].Send(1, ref packet);
             Array.Clear(byteBuffer, 0, byteBuffer.Length);
             bitBuffer.Clear();
@@ -1448,7 +1448,7 @@ public class serverTest : MonoBehaviour
             //buffer.WriteInteger(gamemode);
             Packet packet = new Packet();
             bitBuffer.ToArray(byteBuffer);
-            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+            packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
             peers[peerID].Send(1, ref packet);
             Array.Clear(byteBuffer, 0, byteBuffer.Length);
             bitBuffer.Clear();
@@ -1516,7 +1516,7 @@ public class serverTest : MonoBehaviour
                         bitBuffer.AddByte(slots);
                         Packet packet = new Packet();
                         bitBuffer.ToArray(byteBuffer);
-                        packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                        packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
                         Array.Clear(byteBuffer, 0, byteBuffer.Length);
                         bitBuffer.Clear();
                     }
@@ -1549,7 +1549,7 @@ public class serverTest : MonoBehaviour
             bitBuffer.AddByte(pos);
             Packet packet = new Packet();
             bitBuffer.ToArray(byteBuffer);
-            packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable);
+            packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable);
             Array.Clear(byteBuffer, 0, byteBuffer.Length);
             bitBuffer.Clear();
             for (int i = 0; i <= slots; i++)
@@ -1584,7 +1584,7 @@ public class serverTest : MonoBehaviour
         bitBuffer.AddByte(response);
         Packet packet = new Packet();
         bitBuffer.ToArray(byteBuffer);
-        packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+        packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
         peers[peerID].Send(0, ref packet);
         Array.Clear(byteBuffer, 0, byteBuffer.Length);
         bitBuffer.Clear();
@@ -1626,7 +1626,7 @@ public class serverTest : MonoBehaviour
         bitBuffer.AddByte(powerup);
         Packet packet = new Packet();
         bitBuffer.ToArray(byteBuffer);
-        packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+        packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
         peers[peerID].Send(0, ref packet);
         Array.Clear(byteBuffer, 0, byteBuffer.Length);
         bitBuffer.Clear();
@@ -1662,7 +1662,7 @@ public class serverTest : MonoBehaviour
         bitBuffer.AddString(name);
         Packet packet = new Packet();
         bitBuffer.ToArray(byteBuffer);
-        packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+        packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
         peers[peerID].Send(0, ref packet);
         Array.Clear(byteBuffer, 0, byteBuffer.Length);
         bitBuffer.Clear();
@@ -1673,7 +1673,7 @@ public class serverTest : MonoBehaviour
         bitBuffer.AddByte(9);
         Packet packet = new Packet();
         bitBuffer.ToArray(byteBuffer);
-        packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+        packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
         peers[peerID].Send(0, ref packet);
         Array.Clear(byteBuffer, 0, byteBuffer.Length);
         bitBuffer.Clear();
@@ -1726,7 +1726,7 @@ public class serverTest : MonoBehaviour
         bitBuffer.AddByte(itemID);
         Packet packet = new Packet();
         bitBuffer.ToArray(byteBuffer);
-        packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+        packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
         peers[peerID].Send(1, ref packet);
         Array.Clear(byteBuffer, 0, byteBuffer.Length);
         bitBuffer.Clear();
@@ -1756,7 +1756,7 @@ public class serverTest : MonoBehaviour
         bitBuffer.AddByte(itemID);
         Packet packet = new Packet();
         bitBuffer.ToArray(byteBuffer);
-        packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+        packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
         peers[peerID].Send(1, ref packet);
         Array.Clear(byteBuffer, 0, byteBuffer.Length);
         bitBuffer.Clear();
@@ -1810,7 +1810,7 @@ public class serverTest : MonoBehaviour
         }
         Packet packet4 = new Packet();
         bitBuffer.ToArray(byteBuffer);
-        packet4.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+        packet4.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
         Array.Clear(byteBuffer, 0, byteBuffer.Length);
         bitBuffer.Clear();
 
@@ -1902,7 +1902,7 @@ public class serverTest : MonoBehaviour
                 bitBuffer.AddByte((byte)firstPlacePlayerPos);
                 bitBuffer.ToArray(byteBuffer);
                 Packet packet = new Packet();
-                packet.Create(byteBuffer, byteBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
+                packet.Create(byteBuffer, bitBuffer.Length, PacketFlags.Reliable | PacketFlags.Unsequenced);
                 Array.Clear(byteBuffer, 0, byteBuffer.Length);
                 bitBuffer.Clear();
                 for (int i = 0; i <= lac.slots[map, mode, num]; i++)
@@ -1917,7 +1917,7 @@ public class serverTest : MonoBehaviour
     private void SendPacketToAllClientsLoggedIn(PacketFlags flag, byte channelID)
     {
         Packet packet = new Packet();
-        packet.Create(byteBuffer, byteBuffer.Length, flag);
+        packet.Create(byteBuffer, bitBuffer.Length, flag);
         for (int i = 0; i < maxClients; i++)
         {
             if (!String.IsNullOrEmpty(playerName[i]))
