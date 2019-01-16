@@ -183,10 +183,8 @@ public class serverTest : MonoBehaviour
 
     private void ProcessPacket(Event netEvent)
     {
-        Debug.Log(netEvent.Packet.Length);
         netEvent.Packet.CopyTo(byteBuffer);
         int peerID = (int)netEvent.Peer.Data;
-        Debug.Log("Packet received");
         // add bytebuffer to bitBuffer & read packet id
         bitBuffer.FromArray(byteBuffer, netEvent.Packet.Length);
         byte packetNum = bitBuffer.ReadByte();
@@ -1027,7 +1025,7 @@ public class serverTest : MonoBehaviour
             {
                 peers[lac.id[map, mode, num, i]].Send(3, ref packet);
             }
-            
+            server.Flush();
             yield return oneTenthSecond;
         }
     }
