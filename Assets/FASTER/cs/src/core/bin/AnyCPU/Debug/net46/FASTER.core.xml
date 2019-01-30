@@ -1,0 +1,3011 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>FASTER.core</name>
+    </assembly>
+    <members>
+        <member name="T:FASTER.core.AllocatorBase`2">
+            <summary>
+            Base class for hybrid log memory allocator
+            </summary>
+            <typeparam name="Key"></typeparam>
+            <typeparam name="Value"></typeparam>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.epoch">
+            <summary>
+            Epoch information
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.comparer">
+            <summary>
+            Comparer
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.BufferSize">
+            <summary>
+            Buffer size
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.LogPageSizeBits">
+            <summary>
+            Log page size
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.PageSize">
+            <summary>
+            Page size
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.PageSizeMask">
+            <summary>
+            Page size mask
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.BufferSizeMask">
+            <summary>
+            Buffer size mask
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.AlignedPageSizeBytes">
+            <summary>
+            Aligned page size in bytes
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.LogTotalSizeBits">
+            <summary>
+            Total hybrid log size (bits)
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.LogTotalSizeBytes">
+            <summary>
+            Total hybrid log size (bytes)
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.LogSegmentSizeBits">
+            <summary>
+            Segment size in bits
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.SegmentSize">
+            <summary>
+            Segment size
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.SegmentBufferSize">
+            <summary>
+            Segment buffer size
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.HeadOffsetLagNumPages">
+            <summary>
+            HeadOffset lag (from tail)
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.HeadOffsetLagSize">
+            <summary>
+            HeadOffset lag size
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.HeadOffsetLagAddress">
+            <summary>
+            HeadOFfset lag address
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.LogMutableFraction">
+            <summary>
+            Log mutable fraction
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.ReadOnlyLagAddress">
+            <summary>
+            ReadOnlyOffset lag (from tail)
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.ReadOnlyAddress">
+            <summary>
+            Read-only address
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.SafeReadOnlyAddress">
+            <summary>
+            Safe read-only address
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.HeadAddress">
+            <summary>
+            Head address
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.SafeHeadAddress">
+            <summary>
+             Safe head address
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.FlushedUntilAddress">
+            <summary>
+            Flushed until address
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.BeginAddress">
+            <summary>
+            Begin address
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.device">
+            <summary>
+            Device
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.sectorSize">
+            <summary>
+            Sector size
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.TailPageIndex">
+            <summary>
+            Index in circular buffer, of the current tail page
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.TailPageOffset">
+            <summary>
+            Global address of the current tail (next element to be allocated from the circular buffer) 
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.numPendingReads">
+            <summary>
+            Number of pending reads
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AllocatorBase`2.readBufferPool">
+            <summary>
+            Read buffer pool
+            </summary>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.Initialize">
+            <summary>
+            Initialize
+            </summary>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetStartLogicalAddress(System.Int64)">
+            <summary>
+            Get start logical address
+            </summary>
+            <param name="page"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetPhysicalAddress(System.Int64)">
+            <summary>
+            Get physical address
+            </summary>
+            <param name="newLogicalAddress"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetInfo(System.Int64)">
+            <summary>
+            Get address info
+            </summary>
+            <param name="physicalAddress"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetInfoFromBytePointer(System.Byte*)">
+            <summary>
+            Get info from byte pointer
+            </summary>
+            <param name="ptr"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetKey(System.Int64)">
+            <summary>
+            Get key
+            </summary>
+            <param name="physicalAddress"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetValue(System.Int64)">
+            <summary>
+            Get value
+            </summary>
+            <param name="physicalAddress"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetKeyAddressInfo(System.Int64)">
+            <summary>
+            Get address info for key
+            </summary>
+            <param name="physicalAddress"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetValueAddressInfo(System.Int64)">
+            <summary>
+            Get address info for value
+            </summary>
+            <param name="physicalAddress"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetRecordSize(System.Int64)">
+            <summary>
+            Get record size
+            </summary>
+            <param name="physicalAddress"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetAverageRecordSize">
+            <summary>
+            Get average record size
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetInitialRecordSize``1(`0@,``0@)">
+            <summary>
+            Get initial record size
+            </summary>
+            <typeparam name="Input"></typeparam>
+            <param name="key"></param>
+            <param name="input"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetRecordSize(`0@,`1@)">
+            <summary>
+            Get record size
+            </summary>
+            <param name="key"></param>
+            <param name="value"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.AllocatePage(System.Int32)">
+            <summary>
+            Allocate page
+            </summary>
+            <param name="index"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.IsAllocated(System.Int32)">
+            <summary>
+            Whether page is allocated
+            </summary>
+            <param name="pageIndex"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.PopulatePage(System.Byte*,System.Int32,System.Int64)">
+            <summary>
+            Populate page
+            </summary>
+            <param name="src"></param>
+            <param name="required_bytes"></param>
+            <param name="destinationPage"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.WriteAsyncToDevice``1(System.Int64,System.Int64,System.Int32,System.Threading.IOCompletionCallback,FASTER.core.PageAsyncFlushResult{``0},FASTER.core.IDevice,FASTER.core.IDevice)">
+            <summary>
+            Write async to device
+            </summary>
+            <typeparam name="TContext"></typeparam>
+            <param name="startPage"></param>
+            <param name="flushPage"></param>
+            <param name="pageSize"></param>
+            <param name="callback"></param>
+            <param name="result"></param>
+            <param name="device"></param>
+            <param name="objectLogDevice"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.AsyncReadRecordObjectsToMemory(System.Int64,System.Int32,System.Threading.IOCompletionCallback,FASTER.core.AsyncIOContext{`0,`1},FASTER.core.SectorAlignedMemory)">
+            <summary>
+            Read objects to memory (async)
+            </summary>
+            <param name="fromLogical"></param>
+            <param name="numBytes"></param>
+            <param name="callback"></param>
+            <param name="context"></param>
+            <param name="result"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.ReadAsync``1(System.UInt64,System.Int32,System.UInt32,System.Threading.IOCompletionCallback,FASTER.core.PageAsyncReadResult{``0},FASTER.core.IDevice,FASTER.core.IDevice)">
+            <summary>
+            Read page (async)
+            </summary>
+            <typeparam name="TContext"></typeparam>
+            <param name="alignedSourceAddress"></param>
+            <param name="destinationPageIndex"></param>
+            <param name="aligned_read_length"></param>
+            <param name="callback"></param>
+            <param name="asyncResult"></param>
+            <param name="device"></param>
+            <param name="objlogDevice"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.ClearPage(System.Int32,System.Boolean)">
+            <summary>
+            Clear page
+            </summary>
+            <param name="page"></param>
+            <param name="pageZero"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.WriteAsync``1(System.Int64,System.Threading.IOCompletionCallback,FASTER.core.PageAsyncFlushResult{``0})">
+            <summary>
+            Write page (async)
+            </summary>
+            <typeparam name="TContext"></typeparam>
+            <param name="flushPage"></param>
+            <param name="callback"></param>
+            <param name="asyncResult"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.RetrievedFullRecord(System.Byte*,FASTER.core.AsyncIOContext{`0,`1}@)">
+            <summary>
+            Retrieve full record
+            </summary>
+            <param name="record"></param>
+            <param name="ctx"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.KeyHasObjects">
+            <summary>
+            Whether key has objects
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.ValueHasObjects">
+            <summary>
+            Whether value has objects
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetSegmentOffsets">
+            <summary>
+            Get segment offsets
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.#ctor(FASTER.core.LogSettings,FASTER.core.IFasterEqualityComparer{`0})">
+            <summary>
+            Instantiate base allocator
+            </summary>
+            <param name="settings"></param>
+            <param name="comparer"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.Initialize(System.Int64)">
+            <summary>
+            Initialize allocator
+            </summary>
+            <param name="firstValidAddress"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.Dispose">
+            <summary>
+            Dispose allocator
+            </summary>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetSegmentSize">
+            <summary>
+            Segment size
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetTailAddress">
+            <summary>
+            Get tail address
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetPage(System.Int64)">
+            <summary>
+            Get page
+            </summary>
+            <param name="logicalAddress"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetPageIndexForPage(System.Int64)">
+            <summary>
+            Get page index for page
+            </summary>
+            <param name="page"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetPageIndexForAddress(System.Int64)">
+            <summary>
+            Get page index for address
+            </summary>
+            <param name="address"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetCapacityNumPages">
+            <summary>
+            Get capacity (number of pages)
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetPageSize">
+            <summary>
+            Get page size
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetOffsetInPage(System.Int64)">
+            <summary>
+            Get offset in page
+            </summary>
+            <param name="address"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.GetHeadOffsetLagInPages">
+            <summary>
+            Get offset lag in pages
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.Allocate(System.Int32)">
+            <summary>
+            Key function used to allocate memory for a specified number of items
+            </summary>
+            <param name="numSlots"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.CheckForAllocateComplete(System.Int64@)">
+            <summary>
+            If allocator cannot allocate new memory as the head has not shifted or the previous page 
+            is not yet closed, it allocates but returns the negative address. 
+            This function is invoked to check if the address previously allocated has become valid to be used
+            </summary>
+            <param name="address"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.ShiftReadOnlyToTail(System.Int64@)">
+            <summary>
+            Used by applications to make the current state of the database immutable quickly
+            </summary>
+            <param name="tailAddress"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.ShiftReadOnlyAddress(System.Int64)">
+            <summary>
+            Used by applications to move read-only forward
+            </summary>
+            <param name="newReadOnlyAddress"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.ShiftBeginAddress(System.Int64)">
+            <summary>
+            Shift begin address
+            </summary>
+            <param name="newBeginAddress"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.DeleteAddressRange(System.Int64,System.Int64)">
+            <summary>
+            Delete address range
+            </summary>
+            <param name="fromAddress"></param>
+            <param name="toAddress"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.OnPagesMarkedReadOnly(System.Int64,System.Boolean)">
+            <summary>
+            Seal: make sure there are no longer any threads writing to the page
+            Flush: send page to secondary store
+            </summary>
+            <param name="newSafeReadOnlyAddress"></param>
+            <param name="waitForPendingFlushComplete"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.OnPagesClosed(System.Int64)">
+            <summary>
+            Action to be performed for when all threads have 
+            agreed that a page range is closed.
+            </summary>
+            <param name="newSafeHeadAddress"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.PageAlignedShiftReadOnlyAddress(System.Int64)">
+            <summary>
+            Called every time a new tail page is allocated. Here the read-only is 
+            shifted only to page boundaries unlike ShiftReadOnlyToTail where shifting
+            can happen to any fine-grained address.
+            </summary>
+            <param name="currentTailAddress"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.PageAlignedShiftHeadAddress(System.Int64)">
+            <summary>
+            Called whenever a new tail page is allocated or when the user is checking for a failed memory allocation
+            Tries to shift head address based on the head offset lag size.
+            </summary>
+            <param name="currentTailAddress"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.ShiftHeadAddress(System.Int64)">
+            <summary>
+            Tries to shift head address to specified value
+            </summary>
+            <param name="desiredHeadAddress"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.PageAlignedShiftHeadAddressToValue(System.Int64)">
+            <summary>
+            Called whenever a new tail page is allocated or when the user is checking for a failed memory allocation
+            Tries to shift head address based on the head offset lag size.
+            </summary>
+            <param name="desiredHeadAddress"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.ShiftFlushedUntilAddress">
+            <summary>
+            Every async flush callback tries to update the flushed until address to the latest value possible
+            Is there a better way to do this with enabling fine-grained addresses (not necessarily at page boundaries)?
+            </summary>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.MonotonicUpdate(System.Int64@,System.Int64,System.Int64@)">
+            <summary>
+            Used by several functions to update the variable to newValue. Ignores if newValue is smaller or 
+            than the current value.
+            </summary>
+            <param name="variable"></param>
+            <param name="newValue"></param>
+            <param name="oldValue"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.RecoveryReset(System.Int64,System.Int64)">
+            <summary>
+            Reset for recovery
+            </summary>
+            <param name="tailAddress"></param>
+            <param name="headAddress"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.AsyncReadRecordToMemory(System.Int64,System.Int32,System.Threading.IOCompletionCallback,FASTER.core.AsyncIOContext{`0,`1},FASTER.core.SectorAlignedMemory)">
+            <summary>
+            Invoked by users to obtain a record from disk. It uses sector aligned memory to read 
+            the record efficiently into memory.
+            </summary>
+            <param name="fromLogical"></param>
+            <param name="numBytes"></param>
+            <param name="callback"></param>
+            <param name="context"></param>
+            <param name="result"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.AsyncReadPagesFromDevice``1(System.Int64,System.Int32,System.Threading.IOCompletionCallback,``0,System.Int64,FASTER.core.IDevice,FASTER.core.IDevice)">
+            <summary>
+            Read pages from specified device
+            </summary>
+            <typeparam name="TContext"></typeparam>
+            <param name="readPageStart"></param>
+            <param name="numPages"></param>
+            <param name="callback"></param>
+            <param name="context"></param>
+            <param name="devicePageOffset"></param>
+            <param name="logDevice"></param>
+            <param name="objectLogDevice"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.AsyncReadPagesFromDevice``1(System.Int64,System.Int32,System.Threading.IOCompletionCallback,``0,System.Threading.CountdownEvent@,System.Int64,FASTER.core.IDevice,FASTER.core.IDevice)">
+            <summary>
+            Read pages from specified device
+            </summary>
+            <typeparam name="TContext"></typeparam>
+            <param name="readPageStart"></param>
+            <param name="numPages"></param>
+            <param name="callback"></param>
+            <param name="context"></param>
+            <param name="completed"></param>
+            <param name="devicePageOffset"></param>
+            <param name="device"></param>
+            <param name="objectLogDevice"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.AsyncFlushPages(System.Int64,System.Int64)">
+            <summary>
+            Flush page range to disk
+            Called when all threads have agreed that a page range is sealed.
+            </summary>
+            <param name="startPage"></param>
+            <param name="untilAddress"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.AsyncFlushPages``1(System.Int64,System.Int32,System.Threading.IOCompletionCallback,``0)">
+            <summary>
+            Flush pages asynchronously
+            </summary>
+            <typeparam name="TContext"></typeparam>
+            <param name="flushPageStart"></param>
+            <param name="numPages"></param>
+            <param name="callback"></param>
+            <param name="context"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.AsyncFlushPagesToDevice(System.Int64,System.Int64,System.Int64,FASTER.core.IDevice,FASTER.core.IDevice,System.Threading.CountdownEvent@)">
+            <summary>
+            Flush pages from startPage (inclusive) to endPage (exclusive)
+            to specified log device and obj device
+            </summary>
+            <param name="startPage"></param>
+            <param name="endPage"></param>
+            <param name="endLogicalAddress"></param>
+            <param name="device"></param>
+            <param name="objectLogDevice"></param>
+            <param name="completed"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.AsyncGetFromDisk(System.Int64,System.Int32,FASTER.core.AsyncIOContext{`0,`1},FASTER.core.SectorAlignedMemory)">
+            <summary>
+            Async get from disk
+            </summary>
+            <param name="fromLogical"></param>
+            <param name="numBytes"></param>
+            <param name="context"></param>
+            <param name="result"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.AsyncFlushPageCallback(System.UInt32,System.UInt32,System.Threading.NativeOverlapped*)">
+            <summary>
+            IOCompletion callback for page flush
+            </summary>
+            <param name="errorCode"></param>
+            <param name="numBytes"></param>
+            <param name="overlap"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.AsyncFlushPageToDeviceCallback(System.UInt32,System.UInt32,System.Threading.NativeOverlapped*)">
+            <summary>
+            IOCompletion callback for page flush
+            </summary>
+            <param name="errorCode"></param>
+            <param name="numBytes"></param>
+            <param name="overlap"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.ShallowCopy(`0@,`0@)">
+            <summary>
+            Shallow copy
+            </summary>
+            <param name="src"></param>
+            <param name="dst"></param>
+        </member>
+        <member name="M:FASTER.core.AllocatorBase`2.ShallowCopy(`1@,`1@)">
+            <summary>
+            Shallow copy
+            </summary>
+            <param name="src"></param>
+            <param name="dst"></param>
+        </member>
+        <member name="T:FASTER.core.AsyncIOContext`2">
+            <summary>
+            Async IO context for PMM
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AsyncIOContext`2.id">
+            <summary>
+            Id
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AsyncIOContext`2.request_key">
+            <summary>
+            Key
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AsyncIOContext`2.key">
+            <summary>
+            Retrieved key
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AsyncIOContext`2.value">
+            <summary>
+            Retrieved value
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AsyncIOContext`2.logicalAddress">
+            <summary>
+            Logical address
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AsyncIOContext`2.record">
+            <summary>
+            Record buffer
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AsyncIOContext`2.objBuffer">
+            <summary>
+            Object buffer
+            </summary>
+        </member>
+        <member name="F:FASTER.core.AsyncIOContext`2.callbackQueue">
+            <summary>
+            Callback queue
+            </summary>
+        </member>
+        <member name="M:FASTER.core.BlittableAllocator`2.Dispose">
+            <summary>
+            Dispose memory allocator
+            </summary>
+        </member>
+        <member name="M:FASTER.core.BlittableAllocator`2.AllocatePage(System.Int32)">
+            <summary>
+            Allocate memory page, pinned in memory, and in sector aligned form, if possible
+            </summary>
+            <param name="index"></param>
+        </member>
+        <member name="M:FASTER.core.BlittableAllocator`2.GetStartLogicalAddress(System.Int64)">
+            <summary>
+            Get start logical address
+            </summary>
+            <param name="page"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.BlittableAllocator`2.AsyncReadRecordObjectsToMemory(System.Int64,System.Int32,System.Threading.IOCompletionCallback,FASTER.core.AsyncIOContext{`0,`1},FASTER.core.SectorAlignedMemory)">
+            <summary>
+            Invoked by users to obtain a record from disk. It uses sector aligned memory to read 
+            the record efficiently into memory.
+            </summary>
+            <param name="fromLogical"></param>
+            <param name="numBytes"></param>
+            <param name="callback"></param>
+            <param name="context"></param>
+            <param name="result"></param>
+        </member>
+        <member name="M:FASTER.core.BlittableAllocator`2.RetrievedFullRecord(System.Byte*,FASTER.core.AsyncIOContext{`0,`1}@)">
+            <summary>
+            Retrieve objects from object log
+            </summary>
+            <param name="record"></param>
+            <param name="ctx"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.BlittableAllocator`2.KeyHasObjects">
+            <summary>
+            Whether KVS has keys to serialize/deserialize
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.BlittableAllocator`2.ValueHasObjects">
+            <summary>
+            Whether KVS has values to serialize/deserialize
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.GenericAllocator`2.GetStartLogicalAddress(System.Int64)">
+            <summary>
+            Get start logical address
+            </summary>
+            <param name="page"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.GenericAllocator`2.Dispose">
+            <summary>
+            Dispose memory allocator
+            </summary>
+        </member>
+        <member name="M:FASTER.core.GenericAllocator`2.AllocatePage(System.Int32)">
+            <summary>
+            Allocate memory page, pinned in memory, and in sector aligned form, if possible
+            </summary>
+            <param name="index"></param>
+        </member>
+        <member name="M:FASTER.core.GenericAllocator`2.AsyncFlushPartialObjectLogCallback``1(System.UInt32,System.UInt32,System.Threading.NativeOverlapped*)">
+            <summary>
+            IOCompletion callback for page flush
+            </summary>
+            <param name="errorCode"></param>
+            <param name="numBytes"></param>
+            <param name="overlap"></param>
+        </member>
+        <member name="M:FASTER.core.GenericAllocator`2.AsyncReadRecordObjectsToMemory(System.Int64,System.Int32,System.Threading.IOCompletionCallback,FASTER.core.AsyncIOContext{`0,`1},FASTER.core.SectorAlignedMemory)">
+            <summary>
+            Invoked by users to obtain a record from disk. It uses sector aligned memory to read 
+            the record efficiently into memory.
+            </summary>
+            <param name="fromLogical"></param>
+            <param name="numBytes"></param>
+            <param name="callback"></param>
+            <param name="context"></param>
+            <param name="result"></param>
+        </member>
+        <member name="M:FASTER.core.GenericAllocator`2.Deserialize(System.Int64,System.Int64,System.IO.Stream)">
+            <summary>
+            Deseialize part of page from stream
+            </summary>
+            <param name="ptr">From pointer</param>
+            <param name="untilptr">Until pointer</param>
+            <param name="stream">Stream</param>
+        </member>
+        <member name="M:FASTER.core.GenericAllocator`2.Serialize(System.Int64@,System.Int64,System.IO.Stream,System.Int32,System.Collections.Generic.List{System.Int64}@)">
+            <summary>
+            Serialize part of page to stream
+            </summary>
+            <param name="ptr">From pointer</param>
+            <param name="untilptr">Until pointer</param>
+            <param name="stream">Stream</param>
+            <param name="objectBlockSize">Size of blocks to serialize in chunks of</param>
+            <param name="addr">List of addresses that need to be updated with offsets</param>
+        </member>
+        <member name="M:FASTER.core.GenericAllocator`2.GetObjectInfo(System.Byte*,System.Int64@,System.Int64,System.Int32,System.Int64@,System.Int64@)">
+            <summary>
+            Get location and range of object log addresses for specified log page
+            </summary>
+            <param name="raw"></param>
+            <param name="ptr"></param>
+            <param name="untilptr"></param>
+            <param name="objectBlockSize"></param>
+            <param name="startptr"></param>
+            <param name="size"></param>
+        </member>
+        <member name="M:FASTER.core.GenericAllocator`2.RetrievedFullRecord(System.Byte*,FASTER.core.AsyncIOContext{`0,`1}@)">
+            <summary>
+            Retrieve objects from object log
+            </summary>
+            <param name="record"></param>
+            <param name="ctx"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.GenericAllocator`2.KeyHasObjects">
+            <summary>
+            Whether KVS has keys to serialize/deserialize
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.GenericAllocator`2.ValueHasObjects">
+            <summary>
+            Whether KVS has values to serialize/deserialize
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:FASTER.core.MallocFixedPageSize`1">
+            <summary>
+            Memory allocator for objects
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="F:FASTER.core.MallocFixedPageSize`1.Instance">
+            <summary>
+            Static instance that returns logical addresses
+            </summary>
+        </member>
+        <member name="F:FASTER.core.MallocFixedPageSize`1.PhysicalInstance">
+            <summary>
+            Static instance that returns physical addresses
+            </summary>
+        </member>
+        <member name="M:FASTER.core.MallocFixedPageSize`1.#ctor(System.Boolean)">
+            <summary>
+            Create new instance
+            </summary>
+            <param name="returnPhysicalAddress"></param>
+        </member>
+        <member name="M:FASTER.core.MallocFixedPageSize`1.GetPhysicalAddress(System.Int64)">
+            <summary>
+            Get physical address
+            </summary>
+            <param name="address"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.MallocFixedPageSize`1.Get(System.Int64)">
+            <summary>
+            Get object
+            </summary>
+            <param name="index"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.MallocFixedPageSize`1.Set(System.Int64,`0@)">
+            <summary>
+            Set object
+            </summary>
+            <param name="index"></param>
+            <param name="value"></param>
+        </member>
+        <member name="M:FASTER.core.MallocFixedPageSize`1.FreeAtEpoch(System.Int64,System.Int32)">
+            <summary>
+            Free object
+            </summary>
+            <param name="pointer"></param>
+            <param name="removed_epoch"></param>
+        </member>
+        <member name="M:FASTER.core.MallocFixedPageSize`1.BulkAllocate">
+            <summary>
+            Warning: cannot mix 'n' match use of
+            Allocate and BulkAllocate
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.MallocFixedPageSize`1.Allocate">
+            <summary>
+            Allocate
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.MallocFixedPageSize`1.Dispose">
+            <summary>
+            Dispose
+            </summary>
+        </member>
+        <member name="M:FASTER.core.MallocFixedPageSize`1.TakeCheckpoint(FASTER.core.IDevice,System.UInt64@)">
+            <summary>
+            Public facing persistence API
+            </summary>
+            <param name="device"></param>
+            <param name="numBytes"></param>
+        </member>
+        <member name="M:FASTER.core.MallocFixedPageSize`1.IsCheckpointCompleted(System.Boolean)">
+            <summary>
+            Is checkpoint complete
+            </summary>
+            <param name="waitUntilComplete"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.MallocFixedPageSize`1.GetMaxValidAddress">
+            <summary>
+            Max valid address
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.MallocFixedPageSize`1.GetPageSize">
+            <summary>
+            Get page size
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.MallocFixedPageSize`1.Recover(FASTER.core.IDevice,System.Int32,System.UInt64)">
+            <summary>
+            Recover
+            </summary>
+            <param name="device"></param>
+            <param name="buckets"></param>
+            <param name="numBytes"></param>
+        </member>
+        <member name="M:FASTER.core.MallocFixedPageSize`1.IsRecoveryCompleted(System.Boolean)">
+            <summary>
+            Check if recovery complete
+            </summary>
+            <param name="waitUntilComplete"></param>
+            <returns></returns>
+        </member>
+        <member name="T:FASTER.core.Devices">
+            <summary>
+            Factory to create FASTER objects
+            </summary>
+        </member>
+        <member name="M:FASTER.core.Devices.CreateLogDevice(System.String,System.Boolean,System.Boolean)">
+            <summary>
+            Create a storage device for the log
+            </summary>
+            <param name="logPath">Path to file that will store the log (empty for null device)</param>
+            <param name="preallocateFile">Whether we try to preallocate the file on creation</param>
+            <param name="deleteOnClose">Delete files on close</param>
+            <returns>Device instance</returns>
+        </member>
+        <member name="T:FASTER.core.IDevice">
+            <summary>
+            Interface for devices
+            </summary>
+        </member>
+        <member name="P:FASTER.core.IDevice.SectorSize">
+            <summary>
+            Size of sector
+            </summary>
+        </member>
+        <member name="P:FASTER.core.IDevice.FileName">
+            <summary>
+            Name of device
+            </summary>
+        </member>
+        <member name="M:FASTER.core.IDevice.Initialize(System.Int64)">
+            <summary>
+            Initialize device
+            </summary>
+            <param name="segmentSize"></param>
+        </member>
+        <member name="M:FASTER.core.IDevice.WriteAsync(System.IntPtr,System.Int32,System.UInt64,System.UInt32,System.Threading.IOCompletionCallback,System.IAsyncResult)">
+            <summary>
+            Write
+            </summary>
+            <param name="sourceAddress"></param>
+            <param name="segmentId"></param>
+            <param name="destinationAddress"></param>
+            <param name="numBytesToWrite"></param>
+            <param name="callback"></param>
+            <param name="asyncResult"></param>
+        </member>
+        <member name="M:FASTER.core.IDevice.ReadAsync(System.Int32,System.UInt64,System.IntPtr,System.UInt32,System.Threading.IOCompletionCallback,System.IAsyncResult)">
+            <summary>
+            Read
+            </summary>
+            <param name="segmentId"></param>
+            <param name="sourceAddress"></param>
+            <param name="destinationAddress"></param>
+            <param name="readLength"></param>
+            <param name="callback"></param>
+            <param name="asyncResult"></param>
+        </member>
+        <member name="M:FASTER.core.IDevice.DeleteSegmentRange(System.Int32,System.Int32)">
+            <summary>
+            Delete segment range
+            </summary>
+            <param name="fromSegment"></param>
+            <param name="toSegment"></param>
+        </member>
+        <member name="M:FASTER.core.IDevice.WriteAsync(System.IntPtr,System.UInt64,System.UInt32,System.Threading.IOCompletionCallback,System.IAsyncResult)">
+            <summary>
+            Write
+            </summary>
+            <param name="alignedSourceAddress"></param>
+            <param name="alignedDestinationAddress"></param>
+            <param name="numBytesToWrite"></param>
+            <param name="callback"></param>
+            <param name="asyncResult"></param>
+        </member>
+        <member name="M:FASTER.core.IDevice.ReadAsync(System.UInt64,System.IntPtr,System.UInt32,System.Threading.IOCompletionCallback,System.IAsyncResult)">
+            <summary>
+            Read
+            </summary>
+            <param name="alignedSourceAddress"></param>
+            <param name="alignedDestinationAddress"></param>
+            <param name="aligned_read_length"></param>
+            <param name="callback"></param>
+            <param name="asyncResult"></param>
+        </member>
+        <member name="M:FASTER.core.IDevice.DeleteAddressRange(System.Int64,System.Int64)">
+            <summary>
+            Delete address range
+            </summary>
+            <param name="fromAddress"></param>
+            <param name="toAddress"></param>
+        </member>
+        <member name="M:FASTER.core.IDevice.Close">
+            <summary>
+            Close
+            </summary>
+        </member>
+        <member name="T:FASTER.core.LocalStorageDevice">
+            <summary>
+            Local storage device
+            </summary>
+        </member>
+        <member name="M:FASTER.core.LocalStorageDevice.#ctor(System.String,System.Boolean,System.Boolean)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="filename"></param>
+            <param name="preallocateFile"></param>
+            <param name="deleteOnClose"></param>
+        </member>
+        <member name="M:FASTER.core.LocalStorageDevice.ReadAsync(System.Int32,System.UInt64,System.IntPtr,System.UInt32,System.Threading.IOCompletionCallback,System.IAsyncResult)">
+            <summary>
+            
+            </summary>
+            <param name="segmentId"></param>
+            <param name="sourceAddress"></param>
+            <param name="destinationAddress"></param>
+            <param name="readLength"></param>
+            <param name="callback"></param>
+            <param name="asyncResult"></param>
+        </member>
+        <member name="M:FASTER.core.LocalStorageDevice.WriteAsync(System.IntPtr,System.Int32,System.UInt64,System.UInt32,System.Threading.IOCompletionCallback,System.IAsyncResult)">
+            <summary>
+            
+            </summary>
+            <param name="sourceAddress"></param>
+            <param name="segmentId"></param>
+            <param name="destinationAddress"></param>
+            <param name="numBytesToWrite"></param>
+            <param name="callback"></param>
+            <param name="asyncResult"></param>
+        </member>
+        <member name="M:FASTER.core.LocalStorageDevice.DeleteSegmentRange(System.Int32,System.Int32)">
+            <summary>
+            
+            </summary>
+            <param name="fromSegment"></param>
+            <param name="toSegment"></param>
+        </member>
+        <member name="M:FASTER.core.LocalStorageDevice.Close">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:FASTER.core.LocalStorageDevice.SetFileSize(System.String,Microsoft.Win32.SafeHandles.SafeFileHandle,System.Int64)">
+            Sets file size to the specified value.
+            Does not reset file seek pointer to original location.
+        </member>
+        <member name="T:FASTER.core.ManagedLocalStorageDevice">
+            <summary>
+            Managed device using .NET streams
+            </summary>
+        </member>
+        <member name="M:FASTER.core.ManagedLocalStorageDevice.#ctor(System.String,System.Boolean,System.Boolean)">
+            <summary>
+            
+            </summary>
+            <param name="filename"></param>
+            <param name="preallocateFile"></param>
+            <param name="deleteOnClose"></param>
+        </member>
+        <member name="M:FASTER.core.ManagedLocalStorageDevice.ReadAsync(System.Int32,System.UInt64,System.IntPtr,System.UInt32,System.Threading.IOCompletionCallback,System.IAsyncResult)">
+            <summary>
+            
+            </summary>
+            <param name="segmentId"></param>
+            <param name="sourceAddress"></param>
+            <param name="destinationAddress"></param>
+            <param name="readLength"></param>
+            <param name="callback"></param>
+            <param name="asyncResult"></param>
+        </member>
+        <member name="M:FASTER.core.ManagedLocalStorageDevice.WriteAsync(System.IntPtr,System.Int32,System.UInt64,System.UInt32,System.Threading.IOCompletionCallback,System.IAsyncResult)">
+            <summary>
+            
+            </summary>
+            <param name="sourceAddress"></param>
+            <param name="segmentId"></param>
+            <param name="destinationAddress"></param>
+            <param name="numBytesToWrite"></param>
+            <param name="callback"></param>
+            <param name="asyncResult"></param>
+        </member>
+        <member name="M:FASTER.core.ManagedLocalStorageDevice.DeleteSegmentRange(System.Int32,System.Int32)">
+            <summary>
+            
+            </summary>
+            <param name="fromSegment"></param>
+            <param name="toSegment"></param>
+        </member>
+        <member name="M:FASTER.core.ManagedLocalStorageDevice.Close">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:FASTER.core.ManagedLocalStorageDevice.SetFileSize(System.String,System.IO.Stream,System.Int64)">
+            <summary>
+            Sets file size to the specified value.
+            Does not reset file seek pointer to original location.
+            </summary>
+            <param name="filename"></param>
+            <param name="logHandle"></param>
+            <param name="size"></param>
+            <returns></returns>
+        </member>
+        <member name="T:FASTER.core.NullDevice">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:FASTER.core.NullDevice.#ctor">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:FASTER.core.NullDevice.ReadAsync(System.Int32,System.UInt64,System.IntPtr,System.UInt32,System.Threading.IOCompletionCallback,System.IAsyncResult)">
+            <summary>
+            
+            </summary>
+            <param name="segmentId"></param>
+            <param name="alignedSourceAddress"></param>
+            <param name="alignedDestinationAddress"></param>
+            <param name="aligned_read_length"></param>
+            <param name="callback"></param>
+            <param name="asyncResult"></param>
+        </member>
+        <member name="M:FASTER.core.NullDevice.WriteAsync(System.IntPtr,System.Int32,System.UInt64,System.UInt32,System.Threading.IOCompletionCallback,System.IAsyncResult)">
+            <summary>
+            
+            </summary>
+            <param name="alignedSourceAddress"></param>
+            <param name="segmentId"></param>
+            <param name="alignedDestinationAddress"></param>
+            <param name="numBytesToWrite"></param>
+            <param name="callback"></param>
+            <param name="asyncResult"></param>
+        </member>
+        <member name="M:FASTER.core.NullDevice.DeleteSegmentRange(System.Int32,System.Int32)">
+            <summary>
+            
+            </summary>
+            <param name="fromSegment"></param>
+            <param name="toSegment"></param>
+        </member>
+        <member name="M:FASTER.core.NullDevice.Close">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="T:FASTER.core.StorageDeviceBase">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:FASTER.core.StorageDeviceBase.SectorSize">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:FASTER.core.StorageDeviceBase.FileName">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="F:FASTER.core.StorageDeviceBase.segmentSize">
+            <summary>
+            Segment size
+            </summary>
+        </member>
+        <member name="M:FASTER.core.StorageDeviceBase.#ctor(System.String,System.UInt32)">
+            <summary>
+            
+            </summary>
+            <param name="filename"></param>
+            <param name="sectorSize"></param>
+        </member>
+        <member name="M:FASTER.core.StorageDeviceBase.Initialize(System.Int64)">
+            <summary>
+            Initialize device
+            </summary>
+            <param name="segmentSize"></param>
+        </member>
+        <member name="M:FASTER.core.StorageDeviceBase.WriteAsync(System.IntPtr,System.UInt64,System.UInt32,System.Threading.IOCompletionCallback,System.IAsyncResult)">
+            <summary>
+            
+            </summary>
+            <param name="alignedSourceAddress"></param>
+            <param name="alignedDestinationAddress"></param>
+            <param name="numBytesToWrite"></param>
+            <param name="callback"></param>
+            <param name="asyncResult"></param>
+        </member>
+        <member name="M:FASTER.core.StorageDeviceBase.ReadAsync(System.UInt64,System.IntPtr,System.UInt32,System.Threading.IOCompletionCallback,System.IAsyncResult)">
+            <summary>
+            
+            </summary>
+            <param name="alignedSourceAddress"></param>
+            <param name="alignedDestinationAddress"></param>
+            <param name="aligned_read_length"></param>
+            <param name="callback"></param>
+            <param name="asyncResult"></param>
+        </member>
+        <member name="M:FASTER.core.StorageDeviceBase.DeleteAddressRange(System.Int64,System.Int64)">
+            <summary>
+            
+            </summary>
+            <param name="fromAddress"></param>
+            <param name="toAddress"></param>
+        </member>
+        <member name="M:FASTER.core.StorageDeviceBase.WriteAsync(System.IntPtr,System.Int32,System.UInt64,System.UInt32,System.Threading.IOCompletionCallback,System.IAsyncResult)">
+            <summary>
+            
+            </summary>
+            <param name="sourceAddress"></param>
+            <param name="segmentId"></param>
+            <param name="destinationAddress"></param>
+            <param name="numBytesToWrite"></param>
+            <param name="callback"></param>
+            <param name="asyncResult"></param>
+        </member>
+        <member name="M:FASTER.core.StorageDeviceBase.ReadAsync(System.Int32,System.UInt64,System.IntPtr,System.UInt32,System.Threading.IOCompletionCallback,System.IAsyncResult)">
+            <summary>
+            
+            </summary>
+            <param name="segmentId"></param>
+            <param name="sourceAddress"></param>
+            <param name="destinationAddress"></param>
+            <param name="readLength"></param>
+            <param name="callback"></param>
+            <param name="asyncResult"></param>
+        </member>
+        <member name="M:FASTER.core.StorageDeviceBase.DeleteSegmentRange(System.Int32,System.Int32)">
+            <summary>
+            
+            </summary>
+            <param name="fromSegment"></param>
+            <param name="toSegment"></param>
+        </member>
+        <member name="M:FASTER.core.StorageDeviceBase.Close">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="T:FASTER.core.LightEpoch">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LightEpoch.Instance">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LightEpoch.kInvalidIndex">
+            <summary>
+            Default invalid index entry.
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LightEpoch.kTableSize">
+            <summary>
+            Default number of entries in the entries table
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LightEpoch.kDrainListSize">
+            <summary>
+            Default drainlist size
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LightEpoch.tableRaw">
+            <summary>
+            Thread protection status entries.
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LightEpoch.drainCount">
+            <summary>
+            List of action, epoch pairs containing actions to performed 
+            when an epoch becomes safe to reclaim.
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LightEpoch.numEntries">
+            <summary>
+            Number of entries in the epoch table
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LightEpoch.threadEntryIndex">
+            <summary>
+            A thread's entry in the epoch table.
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LightEpoch.CurrentEpoch">
+            <summary>
+            Global current epoch value
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LightEpoch.SafeToReclaimEpoch">
+            <summary>
+            Cached value of latest epoch that is safe to reclaim
+            </summary>
+        </member>
+        <member name="M:FASTER.core.LightEpoch.#ctor(System.Int32)">
+            <summary>
+            Instantiate the epoch table
+            </summary>
+            <param name="size"></param>
+        </member>
+        <member name="M:FASTER.core.LightEpoch.Finalize">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:FASTER.core.LightEpoch.Initialize(System.Int32)">
+            <summary>
+            Initialize the epoch table
+            </summary>
+            <param name="size"></param>
+        </member>
+        <member name="M:FASTER.core.LightEpoch.Uninitialize">
+            <summary>
+            Clean up epoch table
+            </summary>
+        </member>
+        <member name="M:FASTER.core.LightEpoch.IsProtected">
+            <summary>
+            Check whether current thread is protected
+            </summary>
+            <returns>Result of the check</returns>
+        </member>
+        <member name="M:FASTER.core.LightEpoch.ProtectAndDrain">
+            <summary>
+            Enter the thread into the protected code region
+            </summary>
+            <returns>Current epoch</returns>
+        </member>
+        <member name="M:FASTER.core.LightEpoch.Drain(System.Int32)">
+            <summary>
+            Check and invoke trigger actions that are ready
+            </summary>
+            <param name="nextEpoch">Next epoch</param>
+        </member>
+        <member name="M:FASTER.core.LightEpoch.Release">
+            <summary>
+            Thread releases its epoch entry
+            </summary>
+        </member>
+        <member name="M:FASTER.core.LightEpoch.BumpCurrentEpoch">
+            <summary>
+            Increment global current epoch
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.LightEpoch.BumpCurrentEpoch(System.Action)">
+            <summary>
+            Increment current epoch and associate trigger action
+            with the prior epoch
+            </summary>
+            <param name="onDrain">Trigger action</param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.LightEpoch.ComputeNewSafeToReclaimEpoch(System.Int32)">
+            <summary>
+            Looks at all threads and return the latest safe epoch
+            </summary>
+            <param name="currentEpoch">Current epoch</param>
+            <returns>Safe epoch</returns>
+        </member>
+        <member name="M:FASTER.core.LightEpoch.ReserveEntry(System.Int32,System.Int32)">
+            <summary>
+            Reserve entry for thread. This method relies on the fact that no
+            thread will ever have ID 0.
+            </summary>
+            <param name="startIndex">Start index</param>
+            <param name="threadId">Thread id</param>
+            <returns>Reserved entry</returns>
+        </member>
+        <member name="M:FASTER.core.LightEpoch.ReserveEntryForThread">
+            <summary>
+            Allocate a new entry in epoch table. This is called 
+            once for a thread.
+            </summary>
+            <returns>Reserved entry</returns>
+        </member>
+        <member name="T:FASTER.core.LightEpoch.Entry">
+            <summary>
+            Epoch table entry (cache line size).
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LightEpoch.Entry.localCurrentEpoch">
+            <summary>
+            Thread-local value of epoch
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LightEpoch.Entry.threadId">
+            <summary>
+            ID of thread associated with this entry.
+            </summary>
+        </member>
+        <member name="M:FASTER.core.LightEpoch.MarkAndCheckIsComplete(System.Int32,System.Int32)">
+            <summary>
+            Mechanism for threads to mark some activity as completed until
+            some version by this thread, and check if all active threads 
+            have completed the same activity until that version.
+            </summary>
+            <param name="markerIdx">ID of activity</param>
+            <param name="version">Version</param>
+            <returns></returns>
+        </member>
+        <member name="T:FASTER.core.AddressInfo">
+            <summary>
+            AddressInfo struct
+            </summary>
+        </member>
+        <member name="T:FASTER.core.CheckpointType">
+            <summary>
+            Checkpoint type
+            </summary>
+        </member>
+        <member name="F:FASTER.core.CheckpointType.Snapshot">
+            <summary>
+            Take separate snapshot of in-memory portion of log (default)
+            </summary>
+        </member>
+        <member name="F:FASTER.core.CheckpointType.FoldOver">
+            <summary>
+            Flush current log (move read-only to tail)
+            (enables incremental checkpointing, but log grows faster)
+            </summary>
+        </member>
+        <member name="T:FASTER.core.CheckpointSettings">
+            <summary>
+            Checkpoint-related settings
+            </summary>
+        </member>
+        <member name="F:FASTER.core.CheckpointSettings.CheckpointDir">
+            <summary>
+            Directory where checkpoints are stored
+            </summary>
+        </member>
+        <member name="F:FASTER.core.CheckpointSettings.CheckPointType">
+            <summary>
+            Type of checkpoint
+            </summary>
+        </member>
+        <member name="T:FASTER.core.FasterKV`6">
+            <summary>
+            Checkpoint related function of FASTER
+            </summary>
+            <summary>
+            Partial class for recovery code in FASTER
+            </summary>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.GlobalMoveToNextState(FASTER.core.SystemState,FASTER.core.SystemState,System.Int64@)">
+            <summary>
+            Global transition function that coordinates various state machines. 
+            A few characteristics about the state machine:
+            <list type="bullet">
+            <item>
+            <description>
+            Transitions happen atomically using a compare-and-swap operation. So, multiple threads can try to do the same transition. Only one will succeed.
+            </description>
+            </item>
+            <item>
+            <description>
+            Transition from state A to B happens via an intermediate state (INTERMEDIATE). This serves as a lock by a thread to perform the transition. 
+            Some transitions are accompanied by actions that must be performed before the transitions such as initializing contexts, etc. 
+            </description>
+            </item>
+            <item>
+            <description>
+            States can be part of multiple state machines. For example: PREP_INDEX_CHECKPOINT is part of both index-only and full checkpoints. 
+            </description>
+            </item>
+            </list>
+            
+            We currently support 5 different state machines:
+            <list type="number">
+            <item>
+            <term> Index-Only Checkpoint </term>
+            <description> REST -> PREP_INDEX_CHECKPOINT -> INDEX_CHECKPOINT -> REST </description>
+            </item>
+            <item>
+            <term>HybridLog-Only Checkpoint</term>
+            <description>REST -> PREPARE -> IN_PROGRESS -> WAIT_PENDING -> WAIT_FLUSH -> PERSISTENCE_CALLBACK -> REST</description>
+            </item>
+            <item>
+            <term>Full Checkpoint</term>
+            <description>REST -> PREP_INDEX_CHECKPOINT -> PREPARE -> IN_PROGRESS -> WAIT_PENDING -> WAIT_FLUSH -> PERSISTENCE_CALLBACK -> REST</description>
+            </item>
+            <item>
+            <term>GC</term>
+            <description></description>
+            </item>
+            <item>
+            <term>Grow</term>
+            <description></description>
+            </item>
+            </list>
+            </summary>
+            <param name="currentState">from state of the transition.</param>
+            <param name="nextState">to state of the transition.</param>
+            <param name="context">optional additioanl parameter for transition.</param>
+            <returns>true if transition succeeds.</returns>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.HandleCheckpointingPhases">
+            <summary>
+            Corresponding thread-local actions that must be performed when any state machine is active
+            </summary>
+        </member>
+        <member name="P:FASTER.core.FasterKV`6.LogTailAddress">
+            <summary>
+            Tail address of log
+            </summary>
+        </member>
+        <member name="P:FASTER.core.FasterKV`6.LogReadOnlyAddress">
+            <summary>
+            Read-only address of log
+            </summary>
+        </member>
+        <member name="P:FASTER.core.FasterKV`6.EntryCount">
+            <summary>
+            Number of used entries in hash index
+            </summary>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.#ctor(System.Int64,`5,FASTER.core.LogSettings,FASTER.core.CheckpointSettings,FASTER.core.SerializerSettings{`0,`1},FASTER.core.IFasterEqualityComparer{`0})">
+            <summary>
+            Create FASTER instance
+            </summary>
+            <param name="size">Size of core index (#cache lines)</param>
+            <param name="comparer">FASTER equality comparer for key</param>
+            <param name="functions">Callback functions</param>
+            <param name="logSettings">Log settings</param>
+            <param name="checkpointSettings">Checkpoint settings</param>
+            <param name="serializerSettings">Serializer settings</param>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.TakeFullCheckpoint(System.Guid@)">
+            <summary>
+            Take full checkpoint
+            </summary>
+            <param name="token"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.TakeIndexCheckpoint(System.Guid@)">
+            <summary>
+            Take index checkpoint
+            </summary>
+            <param name="token"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.TakeHybridLogCheckpoint(System.Guid@)">
+            <summary>
+            Take hybrid log checkpoint
+            </summary>
+            <param name="token"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.Recover(System.Guid)">
+            <summary>
+            Recover
+            </summary>
+            <param name="fullCheckpointToken"></param>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.Recover(System.Guid,System.Guid)">
+            <summary>
+            Recover
+            </summary>
+            <param name="indexCheckpointToken"></param>
+            <param name="hybridLogCheckpointToken"></param>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.StartSession">
+            <summary>
+            Start session with FASTER - call once per thread before using FASTER
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.ContinueSession(System.Guid)">
+            <summary>
+            Continue session with FASTER
+            </summary>
+            <param name="guid"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.StopSession">
+            <summary>
+            Stop session with FASTER
+            </summary>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.Refresh">
+            <summary>
+            Refresh epoch (release memory pins)
+            </summary>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.CompletePending(System.Boolean)">
+            <summary>
+            Complete outstanding pending operations
+            </summary>
+            <param name="wait"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.CompleteCheckpoint(System.Boolean)">
+            <summary>
+            Complete the ongoing checkpoint (if any)
+            </summary>
+            <param name="wait"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.Read(`0@,`2@,`3@,`4,System.Int64)">
+            <summary>
+            Read
+            </summary>
+            <param name="key"></param>
+            <param name="input"></param>
+            <param name="output"></param>
+            <param name="userContext"></param>
+            <param name="monotonicSerialNum"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.Upsert(`0@,`1@,`4,System.Int64)">
+            <summary>
+            Upsert
+            </summary>
+            <param name="key"></param>
+            <param name="desiredValue"></param>
+            <param name="userContext"></param>
+            <param name="monotonicSerialNum"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.RMW(`0@,`2@,`4,System.Int64)">
+            <summary>
+            Read-modify-write
+            </summary>
+            <param name="key"></param>
+            <param name="input"></param>
+            <param name="userContext"></param>
+            <param name="monotonicSerialNum"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.ShiftBeginAddress(System.Int64)">
+            <summary>
+            Truncate the log until, but not including, untilAddress
+            </summary>
+            <param name="untilAddress"></param>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.ShiftHeadAddress(System.Int64,System.Boolean)">
+            <summary>
+            Shift log head address to prune memory foorprint of hybrid log
+            </summary>
+            <param name="newHeadAddress">Address to shift head until</param>
+            <param name="wait">Wait to ensure shift is registered (may involve page flushing)</param>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.ShiftReadOnlyAddress(System.Int64)">
+            <summary>
+            Shift log read-only address
+            </summary>
+            <param name="newReadOnlyAddress">Address to shift read-only until</param>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.GrowIndex">
+            <summary>
+            Grow the hash index
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.Dispose">
+            <summary>
+            Dispose FASTER instance
+            </summary>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.InternalRead(`0@,`2@,`3@,`4@,FASTER.core.FasterKV{`0,`1,`2,`3,`4,`5}.PendingContext@)">
+            <summary>
+            Read operation. Computes the 'output' from 'input' and current value corresponding to 'key'.
+            When the read operation goes pending, once the record is retrieved from disk, InternalContinuePendingRead
+            function is used to complete the operation.
+            </summary>
+            <param name="key">Key of the record.</param>
+            <param name="input">Input required to compute output from value.</param>
+            <param name="output">Location to store output computed from input and value.</param>
+            <param name="userContext">User context for the operation, in case it goes pending.</param>
+            <param name="pendingContext">Pending context used internally to store the context of the operation.</param>
+            <returns>
+            <list type="table">
+                <listheader>
+                <term>Value</term>
+                <term>Description</term>
+                </listheader>
+                <item>
+                <term>SUCCESS</term>
+                <term>The output has been computed using current value of 'key' and 'input'; and stored in 'output'.</term>
+                </item>
+                <item>
+                <term>RECORD_ON_DISK</term>
+                <term>The record corresponding to 'key' is on disk and the operation.</term>
+                </item>
+                <item>
+                <term>CPR_SHIFT_DETECTED</term>
+                <term>A shift in version has been detected. Synchronize immediately to avoid violating CPR consistency.</term>
+                </item>
+            </list>
+            </returns>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.InternalContinuePendingRead(FASTER.core.FasterKV{`0,`1,`2,`3,`4,`5}.FasterExecutionContext,FASTER.core.AsyncIOContext{`0,`1},FASTER.core.FasterKV{`0,`1,`2,`3,`4,`5}.PendingContext@)">
+            <summary>
+            Continue a pending read operation. Computes 'output' from 'input' and value corresponding to 'key'
+            obtained from disk. Optionally, it copies the value to tail to serve future read/write requests quickly.
+            </summary>
+            <param name="ctx">The thread (or session) context to execute operation in.</param>
+            <param name="request">Async response from disk.</param>
+            <param name="pendingContext">Pending context corresponding to operation.</param>
+            <returns>
+            <list type = "table" >
+                <listheader>
+                <term>Value</term>
+                <term>Description</term>
+                </listheader>
+                <item>
+                <term>SUCCESS</term>
+                <term>The output has been computed and stored in 'output'.</term>
+                </item>
+            </list>
+            </returns>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.InternalContinuePendingReadCopyToTail(FASTER.core.FasterKV{`0,`1,`2,`3,`4,`5}.FasterExecutionContext,FASTER.core.AsyncIOContext{`0,`1},FASTER.core.FasterKV{`0,`1,`2,`3,`4,`5}.PendingContext@)">
+            <summary>
+            Copies the record read from disk to tail of the HybridLog. 
+            </summary>
+            <param name="ctx"> The thread(or session) context to execute operation in.</param>
+            <param name="request">Async response from disk.</param>
+            <param name="pendingContext">Pending context corresponding to operation.</param>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.InternalUpsert(`0@,`1@,`4@,FASTER.core.FasterKV{`0,`1,`2,`3,`4,`5}.PendingContext@)">
+            <summary>
+            Upsert operation. Replaces the value corresponding to 'key' with provided 'value', if one exists 
+            else inserts a new record with 'key' and 'value'.
+            </summary>
+            <param name="key">key of the record.</param>
+            <param name="value">value to be updated to (or inserted if key does not exist).</param>
+            <param name="userContext">User context for the operation, in case it goes pending.</param>
+            <param name="pendingContext">Pending context used internally to store the context of the operation.</param>
+            <returns>
+            <list type="table">
+                <listheader>
+                <term>Value</term>
+                <term>Description</term>
+                </listheader>
+                <item>
+                <term>SUCCESS</term>
+                <term>The value has been successfully replaced(or inserted)</term>
+                </item>
+                <item>
+                <term>RETRY_LATER</term>
+                <term>Cannot  be processed immediately due to system state. Add to pending list and retry later</term>
+                </item>
+                <item>
+                <term>CPR_SHIFT_DETECTED</term>
+                <term>A shift in version has been detected. Synchronize immediately to avoid violating CPR consistency.</term>
+                </item>
+            </list>
+            </returns>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.InternalRMW(`0@,`2@,`4@,FASTER.core.FasterKV{`0,`1,`2,`3,`4,`5}.PendingContext@)">
+            <summary>
+            Read-Modify-Write Operation. Updates value of 'key' using 'input' and current value.
+            Pending operations are processed either using InternalRetryPendingRMW or 
+            InternalContinuePendingRMW.
+            </summary>
+            <param name="key">key of the record.</param>
+            <param name="input">input used to update the value.</param>
+            <param name="userContext">user context corresponding to operation used during completion callback.</param>
+            <param name="pendingContext">pending context created when the operation goes pending.</param>
+            <returns>
+            <list type="table">
+                <listheader>
+                <term>Value</term>
+                <term>Description</term>
+                </listheader>
+                <item>
+                <term>SUCCESS</term>
+                <term>The value has been successfully updated(or inserted).</term>
+                </item>
+                <item>
+                <term>RECORD_ON_DISK</term>
+                <term>The record corresponding to 'key' is on disk. Issue async IO to retrieve record and retry later.</term>
+                </item>
+                <item>
+                <term>RETRY_LATER</term>
+                <term>Cannot  be processed immediately due to system state. Add to pending list and retry later.</term>
+                </item>
+                <item>
+                <term>CPR_SHIFT_DETECTED</term>
+                <term>A shift in version has been detected. Synchronize immediately to avoid violating CPR consistency.</term>
+                </item>
+            </list>
+            </returns>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.InternalRetryPendingRMW(FASTER.core.FasterKV{`0,`1,`2,`3,`4,`5}.FasterExecutionContext,FASTER.core.FasterKV{`0,`1,`2,`3,`4,`5}.PendingContext@)">
+            <summary>
+            Retries a pending RMW operation. 
+            </summary>
+            <param name="ctx">Thread (or session) context under which operation must be executed.</param>
+            <param name="pendingContext">Internal context of the RMW operation.</param>
+            <returns>
+            <list type="table">
+                <listheader>
+                <term>Value</term>
+                <term>Description</term>
+                </listheader>
+                <item>
+                <term>SUCCESS</term>
+                <term>The value has been successfully updated(or inserted).</term>
+                </item>
+                <item>
+                <term>RECORD_ON_DISK</term>
+                <term>The record corresponding to 'key' is on disk. Issue async IO to retrieve record and retry later.</term>
+                </item>
+                <item>
+                <term>RETRY_LATER</term>
+                <term>Cannot  be processed immediately due to system state. Add to pending list and retry later.</term>
+                </item>
+            </list>
+            </returns>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.InternalContinuePendingRMW(FASTER.core.FasterKV{`0,`1,`2,`3,`4,`5}.FasterExecutionContext,FASTER.core.AsyncIOContext{`0,`1},FASTER.core.FasterKV{`0,`1,`2,`3,`4,`5}.PendingContext@)">
+            <summary>
+            Continue a pending RMW operation with the record retrieved from disk.
+            </summary>
+            <param name="ctx">thread (or session) context under which operation must be executed.</param>
+            <param name="request">record read from the disk.</param>
+            <param name="pendingContext">internal context for the pending RMW operation</param>
+            <returns>
+            <list type="table">
+                <listheader>
+                <term>Value</term>
+                <term>Description</term>
+                </listheader>
+                <item>
+                <term>SUCCESS</term>
+                <term>The value has been successfully updated(or inserted).</term>
+                </item>
+                <item>
+                <term>RECORD_ON_DISK</term>
+                <term>The record corresponding to 'key' is on disk. Issue async IO to retrieve record and retry later.</term>
+                </item>
+                <item>
+                <term>RETRY_LATER</term>
+                <term>Cannot  be processed immediately due to system state. Add to pending list and retry later.</term>
+                </item>
+            </list>
+            </returns>
+        </member>
+        <member name="M:FASTER.core.FasterKV`6.HandleOperationStatus(FASTER.core.FasterKV{`0,`1,`2,`3,`4,`5}.FasterExecutionContext,FASTER.core.FasterKV{`0,`1,`2,`3,`4,`5}.PendingContext,FASTER.core.OperationStatus)">
+            <summary>
+            Performs appropriate handling based on the internal failure status of the trial.
+            </summary>
+            <param name="ctx">Thread (or session) context under which operation was tried to execute.</param>
+            <param name="pendingContext">Internal context of the operation.</param>
+            <param name="status">Internal status of the trial.</param>
+            <returns>
+            <list type="table">
+                <listheader>
+                <term>Value</term>
+                <term>Description</term>
+                </listheader>
+                <item>
+                <term>OK</term>
+                <term>The operation has been completed successfully.</term>
+                </item>
+                <item>
+                <term>PENDING</term>
+                <term>The operation is still pending and will callback when done.</term>
+                </item>
+            </list>
+            </returns>
+        </member>
+        <member name="T:FASTER.core.HybridLogRecoveryInfo">
+            <summary>
+            Recovery info for hybrid log
+            </summary>
+        </member>
+        <member name="F:FASTER.core.HybridLogRecoveryInfo.guid">
+            <summary>
+            Guid
+            </summary>
+        </member>
+        <member name="F:FASTER.core.HybridLogRecoveryInfo.useSnapshotFile">
+            <summary>
+            Use snapshot file
+            </summary>
+        </member>
+        <member name="F:FASTER.core.HybridLogRecoveryInfo.version">
+            <summary>
+            Version
+            </summary>
+        </member>
+        <member name="F:FASTER.core.HybridLogRecoveryInfo.numThreads">
+            <summary>
+            Number of threads
+            </summary>
+        </member>
+        <member name="F:FASTER.core.HybridLogRecoveryInfo.flushedLogicalAddress">
+            <summary>
+            Flushed logical address
+            </summary>
+        </member>
+        <member name="F:FASTER.core.HybridLogRecoveryInfo.startLogicalAddress">
+            <summary>
+            Start logical address
+            </summary>
+        </member>
+        <member name="F:FASTER.core.HybridLogRecoveryInfo.finalLogicalAddress">
+            <summary>
+            Final logical address
+            </summary>
+        </member>
+        <member name="F:FASTER.core.HybridLogRecoveryInfo.guids">
+            <summary>
+            Guid array
+            </summary>
+        </member>
+        <member name="F:FASTER.core.HybridLogRecoveryInfo.continueTokens">
+            <summary>
+            Tokens per guid
+            </summary>
+        </member>
+        <member name="F:FASTER.core.HybridLogRecoveryInfo.objectLogSegmentOffsets">
+            <summary>
+            Object log segment offsets
+            </summary>
+        </member>
+        <member name="M:FASTER.core.HybridLogRecoveryInfo.Initialize(System.Guid,System.Int32)">
+            <summary>
+            Initialize
+            </summary>
+            <param name="token"></param>
+            <param name="_version"></param>
+        </member>
+        <member name="M:FASTER.core.HybridLogRecoveryInfo.Initialize(System.IO.StreamReader)">
+            <summary>
+            Initialize from stream
+            </summary>
+            <param name="reader"></param>
+        </member>
+        <member name="M:FASTER.core.HybridLogRecoveryInfo.Recover(System.Guid,System.String)">
+            <summary>
+            Recover info from token and checkpoint directory
+            </summary>
+            <param name="token"></param>
+            <param name="checkpointDir"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.HybridLogRecoveryInfo.Recover(System.Guid,FASTER.core.DirectoryConfiguration)">
+            <summary>
+             Recover info from token
+            </summary>
+            <param name="token"></param>
+            <param name="directoryConfiguration"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.HybridLogRecoveryInfo.Reset">
+            <summary>
+            Reset
+            </summary>
+        </member>
+        <member name="M:FASTER.core.HybridLogRecoveryInfo.Write(System.IO.StreamWriter)">
+            <summary>
+            Write info to file
+            </summary>
+            <param name="writer"></param>
+        </member>
+        <member name="T:FASTER.core.SerializerSettings`2">
+            <summary>
+            Configuration settings for serializing objects
+            </summary>
+            <typeparam name="Key"></typeparam>
+            <typeparam name="Value"></typeparam>
+        </member>
+        <member name="F:FASTER.core.SerializerSettings`2.keySerializer">
+            <summary>
+            Key serializer
+            </summary>
+        </member>
+        <member name="F:FASTER.core.SerializerSettings`2.valueSerializer">
+            <summary>
+            Value serializer
+            </summary>
+        </member>
+        <member name="T:FASTER.core.LogSettings">
+            <summary>
+            Configuration settings for hybrid log
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LogSettings.LogDevice">
+            <summary>
+            Device used for main hybrid log
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LogSettings.ObjectLogDevice">
+            <summary>
+            Device used for serialized heap objects in hybrid log
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LogSettings.PageSizeBits">
+            <summary>
+            Size of a segment (group of pages), in bits
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LogSettings.SegmentSizeBits">
+            <summary>
+            Size of a segment (group of pages), in bits
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LogSettings.MemorySizeBits">
+            <summary>
+            Total size of in-memory part of log, in bits
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LogSettings.MutableFraction">
+            <summary>
+            Fraction of log marked as mutable (in-place updates)
+            </summary>
+        </member>
+        <member name="F:FASTER.core.LogSettings.CopyReadsToTail">
+            <summary>
+            Copy reads to tail of log
+            </summary>
+        </member>
+        <member name="F:FASTER.core.Constants.kCacheLineBytes">
+            Size of cache line in bytes
+        </member>
+        <member name="F:FASTER.core.Constants.kBitsPerBucket">
+            Number of entries per bucket (assuming 8-byte entries to fill a cacheline)
+            Number of bits per bucket (assuming 8-byte entries to fill a cacheline)
+        </member>
+        <member name="F:FASTER.core.Constants.kInvalidEntrySlot">
+            Invalid entry value
+        </member>
+        <member name="F:FASTER.core.Constants.kOverflowBucketIndex">
+            Location of the special bucket entry
+        </member>
+        <member name="F:FASTER.core.Constants.kInvalidEntry">
+            Invalid value in the hash table
+        </member>
+        <member name="F:FASTER.core.Constants.kRetryThreshold">
+            Number of times to retry a compare-and-swap before failure
+        </member>
+        <member name="F:FASTER.core.Constants.kNumMergeChunkBits">
+            Number of merge/split chunks.
+        </member>
+        <member name="T:FASTER.core.FasterBase">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:FASTER.core.FasterBase.#ctor">
+            <summary>
+            Constructor
+            </summary>
+        </member>
+        <member name="M:FASTER.core.FasterBase.Initialize(System.Int64,System.Int32)">
+            <summary>
+            Initialize
+            </summary>
+            <param name="size"></param>
+            <param name="sector_size"></param>
+        </member>
+        <member name="M:FASTER.core.FasterBase.Initialize(System.Int32,System.Int64,System.Int32)">
+            <summary>
+            Initialize
+            </summary>
+            <param name="version"></param>
+            <param name="size"></param>
+            <param name="sector_size"></param>
+        </member>
+        <member name="M:FASTER.core.FasterBase.FindTag(System.Int64,System.UInt16,FASTER.core.HashBucket*@,System.Int32@,FASTER.core.HashBucketEntry@)">
+            <summary>
+            A helper function that is used to find the slot corresponding to a
+            key in the specified version of the hash table
+            </summary>
+            <param name="hash"></param>
+            <param name="tag"></param>
+            <param name="bucket"></param>
+            <param name="slot"></param>
+            <param name="entry"></param>
+            <returns>true if such a slot exists, false otherwise</returns>
+        </member>
+        <member name="M:FASTER.core.FasterBase.FindTagOrFreeInternal(System.Int64,System.UInt16,FASTER.core.HashBucket*@,System.Int32@,FASTER.core.HashBucketEntry@)">
+            <summary>
+            Find existing entry (non-tenative)
+            If not found, return pointer to some empty slot
+            </summary>
+            <param name="hash"></param>
+            <param name="tag"></param>
+            <param name="bucket"></param>
+            <param name="slot"></param>
+            <param name="entry"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.FasterBase.FindOtherTagMaybeTentativeInternal(System.Int64,System.UInt16,FASTER.core.HashBucket*@,System.Int32@,FASTER.core.HashBucket*,System.Int32)">
+            <summary>
+            Find existing entry (tenative or otherwise) other than the specified "exception" slot
+            If not found, return false. Does not return a free slot.
+            </summary>
+            <param name="hash"></param>
+            <param name="tag"></param>
+            <param name="bucket"></param>
+            <param name="slot"></param>
+            <param name="except_bucket"></param>
+            <param name="except_entry_slot"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.FasterBase.UpdateSlot(FASTER.core.HashBucket*,System.Int32,System.Int64,System.Int64,System.Int64@)">
+            <summary>
+            Helper function used to update the slot atomically with the
+            new offset value using the CAS operation
+            </summary>
+            <param name="bucket"></param>
+            <param name="entrySlot"></param>
+            <param name="expected"></param>
+            <param name="desired"></param>
+            <param name="found"></param>
+            <returns>If atomic update was successful</returns>
+        </member>
+        <member name="M:FASTER.core.FasterBase.GetEntryCount">
+            <summary>
+            
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.FasterBase._DumpDistribution(System.Int32)">
+            <summary>
+            
+            </summary>
+            <param name="version"></param>
+        </member>
+        <member name="M:FASTER.core.FasterBase.DumpDistribution">
+            <summary>
+            Dumps the distribution of each non-empty bucket in the hash table.
+            </summary>
+        </member>
+        <member name="T:FASTER.core.IFasterEqualityComparer`1">
+            <summary>
+            Key interface
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="M:FASTER.core.IFasterEqualityComparer`1.GetHashCode64(`0@)">
+            <summary>
+            Get 64-bit hash code
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.IFasterEqualityComparer`1.Equals(`0@,`0@)">
+            <summary>
+            Equality comparison
+            </summary>
+            <param name="k1">Left side</param>
+            <param name="k2">Right side</param>
+            <returns></returns>
+        </member>
+        <member name="T:FASTER.core.IFasterKV`5">
+            <summary>
+            Interface to FASTER key-value store
+            (customized for sample types Key, Value, Input, Output, Context)
+            Since there are pointers in the API, we cannot automatically create a
+            generic version covering arbitrary blittable types. Instead, the
+            user defines the customized interface and provides it to FASTER
+            so it can return a (generated) instance for that interface.
+            </summary>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.StartSession">
+            <summary>
+            Start a session with FASTER. FASTER sessions correspond to threads issuing
+            operations to FASTER.
+            </summary>
+            <returns>Session identifier</returns>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.ContinueSession(System.Guid)">
+            <summary>
+            Continue a session after recovery. Provide FASTER with the identifier of the
+            session that is being continued.
+            </summary>
+            <param name="guid"></param>
+            <returns>Sequence number for resuming operations</returns>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.StopSession">
+            <summary>
+            Stop a session and de-register the thread from FASTER.
+            </summary>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.Refresh">
+            <summary>
+            Refresh the session epoch. The caller is required to invoke Refresh periodically
+            in order to guarantee system liveness.
+            </summary>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.Read(`0@,`2@,`3@,`4,System.Int64)">
+            <summary>
+            Read operation
+            </summary>
+            <param name="key">Key of read</param>
+            <param name="input">Input argument used by Reader to select what part of value to read</param>
+            <param name="output">Reader stores the read result in output</param>
+            <param name="context">User context to identify operation in asynchronous callback</param>
+            <param name="lsn">Increasing sequence number of operation (used for recovery)</param>
+            <returns>Status of operation</returns>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.Upsert(`0@,`1@,`4,System.Int64)">
+            <summary>
+            (Blind) upsert operation
+            </summary>
+            <param name="key">Key of read</param>
+            <param name="value">Value being upserted</param>
+            <param name="context">User context to identify operation in asynchronous callback</param>
+            <param name="lsn">Increasing sequence number of operation (used for recovery)</param>
+            <returns>Status of operation</returns>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.RMW(`0@,`2@,`4,System.Int64)">
+            <summary>
+            Atomic read-modify-write operation
+            </summary>
+            <param name="key">Key of read</param>
+            <param name="input">Input argument used by RMW callback to perform operation</param>
+            <param name="context">User context to identify operation in asynchronous callback</param>
+            <param name="lsn">Increasing sequence number of operation (used for recovery)</param>
+            <returns>Status of operation</returns>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.CompletePending(System.Boolean)">
+            <summary>
+            Complete all pending operations issued by this session
+            </summary>
+            <param name="wait">Whether we spin-wait for pending operations to complete</param>
+            <returns>Whether all pending operations have completed</returns>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.ShiftBeginAddress(System.Int64)">
+            <summary>
+            Truncate the log until, but not including, untilAddress
+            </summary>
+            <param name="untilAddress">Address to shift until</param>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.ShiftHeadAddress(System.Int64,System.Boolean)">
+            <summary>
+            Shift head address to specified address
+            </summary>
+            <param name="newHeadAddress">Address to shift head to</param>
+            <param name="wait">Wait until shift is registered (may involve page flushing)</param>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.ShiftReadOnlyAddress(System.Int64)">
+            <summary>
+            Shift read-only address to specified address
+            </summary>
+            <param name="newReadOnlyAddress">Address to shift read-only to</param>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.TakeFullCheckpoint(System.Guid@)">
+            <summary>
+            Take full checkpoint of FASTER
+            </summary>
+            <param name="token">Token describing checkpoint</param>
+            <returns>Whether checkpoint was initiated</returns>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.TakeIndexCheckpoint(System.Guid@)">
+            <summary>
+            Take checkpoint of FASTER index only (not log)
+            </summary>
+            <param name="token">Token describing checkpoin</param>
+            <returns>Whether checkpoint was initiated</returns>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.TakeHybridLogCheckpoint(System.Guid@)">
+            <summary>
+            Take checkpoint of FASTER log only (not index)
+            </summary>
+            <param name="token">Token describing checkpoin</param>
+            <returns>Whether checkpoint was initiated</returns>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.Recover(System.Guid)">
+            <summary>
+            Recover using full checkpoint token
+            </summary>
+            <param name="fullcheckpointToken"></param>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.Recover(System.Guid,System.Guid)">
+            <summary>
+            Recover using a separate index and log checkpoint token
+            </summary>
+            <param name="indexToken"></param>
+            <param name="hybridLogToken"></param>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.CompleteCheckpoint(System.Boolean)">
+            <summary>
+            Complete ongoing checkpoint (spin-wait)
+            </summary>
+            <param name="wait"></param>
+            <returns>Whether checkpoint has completed</returns>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.GrowIndex">
+            <summary>
+            Grow the hash index
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:FASTER.core.IFasterKV`5.LogTailAddress">
+            <summary>
+            Get tail address of FASTER log
+            </summary>
+        </member>
+        <member name="P:FASTER.core.IFasterKV`5.LogReadOnlyAddress">
+            <summary>
+            Get (safe) read-only address of FASTER
+            </summary>
+        </member>
+        <member name="P:FASTER.core.IFasterKV`5.EntryCount">
+            <summary>
+            Get number of (non-zero) hash entries in FASTER
+            </summary>
+        </member>
+        <member name="M:FASTER.core.IFasterKV`5.DumpDistribution">
+            <summary>
+            Dump distribution of #entries in hash table, to console
+            </summary>
+        </member>
+        <member name="T:FASTER.core.IFunctions`5">
+            <summary>
+            Callback functions to FASTER
+            </summary>
+            <typeparam name="Key"></typeparam>
+            <typeparam name="Value"></typeparam>
+            <typeparam name="Input"></typeparam>
+            <typeparam name="Output"></typeparam>
+            <typeparam name="Context"></typeparam>
+        </member>
+        <member name="M:FASTER.core.IFunctions`5.ReadCompletionCallback(`0@,`2@,`3@,`4,FASTER.core.Status)">
+            <summary>
+            Read completion
+            </summary>
+            <param name="key"></param>
+            <param name="input"></param>
+            <param name="output"></param>
+            <param name="ctx"></param>
+            <param name="status"></param>
+        </member>
+        <member name="M:FASTER.core.IFunctions`5.UpsertCompletionCallback(`0@,`1@,`4)">
+            <summary>
+            Upsert completion
+            </summary>
+            <param name="key"></param>
+            <param name="value"></param>
+            <param name="ctx"></param>
+        </member>
+        <member name="M:FASTER.core.IFunctions`5.RMWCompletionCallback(`0@,`2@,`4,FASTER.core.Status)">
+            <summary>
+            RMW completion
+            </summary>
+            <param name="key"></param>
+            <param name="input"></param>
+            <param name="ctx"></param>
+            <param name="status"></param>
+        </member>
+        <member name="M:FASTER.core.IFunctions`5.CheckpointCompletionCallback(System.Guid,System.Int64)">
+            <summary>
+            Checkpoint completion callback (called per client session)
+            </summary>
+            <param name="sessionId">Session ID reporting persistence</param>
+            <param name="serialNum">Checkpoint offset (CPR point) for session</param>
+        </member>
+        <member name="M:FASTER.core.IFunctions`5.InitialUpdater(`0@,`2@,`1@)">
+            <summary>
+            Initial update for RMW
+            </summary>
+            <param name="key"></param>
+            <param name="input"></param>
+            <param name="value"></param>
+        </member>
+        <member name="M:FASTER.core.IFunctions`5.CopyUpdater(`0@,`2@,`1@,`1@)">
+            <summary>
+            Copy-update for RMW
+            </summary>
+            <param name="key"></param>
+            <param name="input"></param>
+            <param name="oldValue"></param>
+            <param name="newValue"></param>
+        </member>
+        <member name="M:FASTER.core.IFunctions`5.InPlaceUpdater(`0@,`2@,`1@)">
+            <summary>
+            In-place update for RMW
+            </summary>
+            <param name="key"></param>
+            <param name="input"></param>
+            <param name="value"></param>
+        </member>
+        <member name="M:FASTER.core.IFunctions`5.SingleReader(`0@,`2@,`1@,`3@)">
+            <summary>
+            Single reader
+            </summary>
+            <param name="key"></param>
+            <param name="input"></param>
+            <param name="value"></param>
+            <param name="dst"></param>
+        </member>
+        <member name="M:FASTER.core.IFunctions`5.ConcurrentReader(`0@,`2@,`1@,`3@)">
+            <summary>
+            Conncurrent reader
+            </summary>
+            <param name="key"></param>
+            <param name="input"></param>
+            <param name="value"></param>
+            <param name="dst"></param>
+        </member>
+        <member name="M:FASTER.core.IFunctions`5.SingleWriter(`0@,`1@,`1@)">
+            <summary>
+            Single writer
+            </summary>
+            <param name="key"></param>
+            <param name="src"></param>
+            <param name="dst"></param>
+        </member>
+        <member name="M:FASTER.core.IFunctions`5.ConcurrentWriter(`0@,`1@,`1@)">
+            <summary>
+            Concurrent writer
+            </summary>
+            <param name="key"></param>
+            <param name="src"></param>
+            <param name="dst"></param>
+        </member>
+        <member name="T:FASTER.core.IObjectSerializer`1">
+            <summary>
+            Object serializer interface
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="M:FASTER.core.IObjectSerializer`1.BeginSerialize(System.IO.Stream)">
+            <summary>
+            Begin serialization to given stream
+            </summary>
+            <param name="stream"></param>
+        </member>
+        <member name="M:FASTER.core.IObjectSerializer`1.Serialize(`0@)">
+            <summary>
+            Serialize object
+            </summary>
+            <param name="obj"></param>
+        </member>
+        <member name="M:FASTER.core.IObjectSerializer`1.EndSerialize">
+            <summary>
+            End serialization to given stream
+            </summary>
+        </member>
+        <member name="M:FASTER.core.IObjectSerializer`1.BeginDeserialize(System.IO.Stream)">
+            <summary>
+            Begin deserialization from given stream
+            </summary>
+            <param name="stream"></param>
+        </member>
+        <member name="M:FASTER.core.IObjectSerializer`1.Deserialize(`0@)">
+            <summary>
+            Deserialize object
+            </summary>
+            <param name="obj"></param>
+        </member>
+        <member name="M:FASTER.core.IObjectSerializer`1.EndDeserialize">
+            <summary>
+            End deserialization from given stream
+            </summary>
+        </member>
+        <member name="T:FASTER.core.BinaryObjectSerializer`1">
+            <summary>
+            Serializer base class for binary reader and writer
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="F:FASTER.core.BinaryObjectSerializer`1.reader">
+            <summary>
+            Binary reader
+            </summary>
+        </member>
+        <member name="F:FASTER.core.BinaryObjectSerializer`1.writer">
+            <summary>
+            Binary writer
+            </summary>
+        </member>
+        <member name="M:FASTER.core.BinaryObjectSerializer`1.BeginDeserialize(System.IO.Stream)">
+            <summary>
+            Begin deserialization
+            </summary>
+            <param name="stream"></param>
+        </member>
+        <member name="M:FASTER.core.BinaryObjectSerializer`1.Deserialize(`0@)">
+            <summary>
+            Deserialize
+            </summary>
+            <param name="obj"></param>
+        </member>
+        <member name="M:FASTER.core.BinaryObjectSerializer`1.EndDeserialize">
+            <summary>
+            End deserialize
+            </summary>
+        </member>
+        <member name="M:FASTER.core.BinaryObjectSerializer`1.BeginSerialize(System.IO.Stream)">
+            <summary>
+            Begin serialize
+            </summary>
+            <param name="stream"></param>
+        </member>
+        <member name="M:FASTER.core.BinaryObjectSerializer`1.Serialize(`0@)">
+            <summary>
+            Serialize
+            </summary>
+            <param name="obj"></param>
+        </member>
+        <member name="M:FASTER.core.BinaryObjectSerializer`1.EndSerialize">
+            <summary>
+            End serialize
+            </summary>
+        </member>
+        <member name="T:FASTER.core.SectorAlignedMemory">
+            <summary>
+            Sector aligned memory allocator
+            </summary>
+        </member>
+        <member name="F:FASTER.core.SectorAlignedMemory.buffer">
+            <summary>
+            Actual buffer
+            </summary>
+        </member>
+        <member name="F:FASTER.core.SectorAlignedMemory.handle">
+            <summary>
+            Handle
+            </summary>
+        </member>
+        <member name="F:FASTER.core.SectorAlignedMemory.offset">
+            <summary>
+            Offset
+            </summary>
+        </member>
+        <member name="F:FASTER.core.SectorAlignedMemory.aligned_pointer">
+            <summary>
+            Aligned pointer
+            </summary>
+        </member>
+        <member name="F:FASTER.core.SectorAlignedMemory.valid_offset">
+            <summary>
+            Valid offset
+            </summary>
+        </member>
+        <member name="F:FASTER.core.SectorAlignedMemory.required_bytes">
+            <summary>
+            Required bytes
+            </summary>
+        </member>
+        <member name="F:FASTER.core.SectorAlignedMemory.available_bytes">
+            <summary>
+            Available bytes
+            </summary>
+        </member>
+        <member name="M:FASTER.core.SectorAlignedMemory.Return">
+            <summary>
+            Return
+            </summary>
+        </member>
+        <member name="M:FASTER.core.SectorAlignedMemory.GetValidPointer">
+            <summary>
+            Get valid pointer
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:FASTER.core.SectorAlignedBufferPool">
+            <summary>
+            SectorAlignedBufferPool is a pool of memory. 
+            Internally, it is organized as an array of concurrent queues where each concurrent
+            queue represents a memory of size in particular range. queue[i] contains memory 
+            segments each of size (2^i * sectorSize).
+            </summary>
+        </member>
+        <member name="M:FASTER.core.SectorAlignedBufferPool.GetPool(System.Int32,System.Int32)">
+            <summary>
+            Get cached instance of buffer pool for specified params
+            </summary>
+            <param name="recordSize">Record size</param>
+            <param name="sectorSize">Sector size</param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.SectorAlignedBufferPool.#ctor(System.Int32,System.Int32)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="recordSize">Record size</param>
+            <param name="sectorSize">Sector size</param>
+        </member>
+        <member name="M:FASTER.core.SectorAlignedBufferPool.Return(FASTER.core.SectorAlignedMemory)">
+            <summary>
+            Return
+            </summary>
+            <param name="page"></param>
+        </member>
+        <member name="M:FASTER.core.SectorAlignedBufferPool.Get(System.Int32)">
+            <summary>
+            Get buffer
+            </summary>
+            <param name="numRecords"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.SectorAlignedBufferPool.Free">
+            <summary>
+            Free buffer
+            </summary>
+        </member>
+        <member name="T:FASTER.core.FasterEqualityComparer`1">
+            <summary>
+            Low-performance FASTER equality comparer wrapper around EqualityComparer.Default
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="T:FASTER.core.Native32">
+            <summary>
+            Interop with WINAPI for file I/O, threading, and NUMA functions.
+            </summary>
+        </member>
+        <member name="M:FASTER.core.Native32.AffinitizeThreadRoundRobin(System.UInt32)">
+            <summary>
+            Accepts thread id = 0, 1, 2, ... and sprays them round-robin
+            across all cores (viewed as a flat space). On NUMA machines,
+            this gives us [socket, core] ordering of affinitization. That is, 
+            if there are N cores per socket, then thread indices of 0 to N-1 map
+            to the range [socket 0, core 0] to [socket 0, core N-1].
+            </summary>
+            <param name="threadIdx">Index of thread (from 0 onwards)</param>
+        </member>
+        <member name="M:FASTER.core.Native32.AffinitizeThreadShardedNuma(System.UInt32,System.UInt16)">
+            <summary>
+            Accepts thread id = 0, 1, 2, ... and sprays them round-robin
+            across all cores (viewed as a flat space). On NUMA machines,
+            this gives us [core, socket] ordering of affinitization. That is, 
+            if there are N cores per socket, then thread indices of 0 to N-1 map
+            to the range [socket 0, core 0] to [socket N-1, core 0].
+            </summary>
+            <param name="threadIdx">Index of thread (from 0 onwards)</param>
+            <param name="nrOfProcessorGroups">Number of NUMA sockets</param>
+        </member>
+        <member name="M:FASTER.core.Native32.EnableProcessPrivileges">
+            <summary>
+            Enable privilege for process
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.Native32.SetFileSize(Microsoft.Win32.SafeHandles.SafeFileHandle,System.Int64)">
+            <summary>
+            Set file size
+            </summary>
+            <param name="file_handle"></param>
+            <param name="file_size"></param>
+            <returns></returns>
+        </member>
+        <member name="T:FASTER.core.PageAsyncReadResult`1">
+            <summary>
+            Result of async page read
+            </summary>
+            <typeparam name="TContext"></typeparam>
+        </member>
+        <member name="F:FASTER.core.PageAsyncReadResult`1.page">
+            <summary>
+            Page
+            </summary>
+        </member>
+        <member name="F:FASTER.core.PageAsyncReadResult`1.context">
+            <summary>
+            Context
+            </summary>
+        </member>
+        <member name="F:FASTER.core.PageAsyncReadResult`1.count">
+            <summary>
+            Count
+            </summary>
+        </member>
+        <member name="P:FASTER.core.PageAsyncReadResult`1.IsCompleted">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:FASTER.core.PageAsyncReadResult`1.AsyncWaitHandle">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:FASTER.core.PageAsyncReadResult`1.AsyncState">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:FASTER.core.PageAsyncReadResult`1.CompletedSynchronously">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:FASTER.core.PageAsyncReadResult`1.Free">
+            <summary>
+            Free
+            </summary>
+        </member>
+        <member name="T:FASTER.core.PageAsyncFlushResult`1">
+            <summary>
+            Page async flush result
+            </summary>
+            <typeparam name="TContext"></typeparam>
+        </member>
+        <member name="F:FASTER.core.PageAsyncFlushResult`1.page">
+            <summary>
+            Page
+            </summary>
+        </member>
+        <member name="F:FASTER.core.PageAsyncFlushResult`1.context">
+            <summary>
+            Context
+            </summary>
+        </member>
+        <member name="F:FASTER.core.PageAsyncFlushResult`1.count">
+            <summary>
+            Count
+            </summary>
+        </member>
+        <member name="P:FASTER.core.PageAsyncFlushResult`1.IsCompleted">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:FASTER.core.PageAsyncFlushResult`1.AsyncWaitHandle">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:FASTER.core.PageAsyncFlushResult`1.AsyncState">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:FASTER.core.PageAsyncFlushResult`1.CompletedSynchronously">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:FASTER.core.PageAsyncFlushResult`1.Free">
+            <summary>
+            Free
+            </summary>
+        </member>
+        <member name="T:FASTER.core.SafeConcurrentDictionary`2">
+            <summary>
+            A dictionary that supports concurrency with similar interface to .NET's ConcurrentDictionary.
+            However, this dictionary changes the implementation of AddOrUpdate and GetOrAdd functions to
+            guarantee atomicity per-key for factory lambdas.
+            </summary>
+            <typeparam name="TKey">Type of keys in the dictionary</typeparam>
+            <typeparam name="TValue">Type of values in the dictionary</typeparam>
+        </member>
+        <member name="P:FASTER.core.SafeConcurrentDictionary`2.Count">
+            <summary>
+            Returns the count of the dictionary.
+            </summary>
+        </member>
+        <member name="P:FASTER.core.SafeConcurrentDictionary`2.IsEmpty">
+            <summary>
+            Returns whether or not the dictionary is empty.
+            </summary>
+        </member>
+        <member name="P:FASTER.core.SafeConcurrentDictionary`2.Item(`0)">
+            <summary>
+            Gets or sets the value associated with a key.
+            </summary>
+        </member>
+        <member name="P:FASTER.core.SafeConcurrentDictionary`2.Keys">
+            <summary>
+            Returns a collection of the keys in the dictionary.
+            </summary>
+        </member>
+        <member name="P:FASTER.core.SafeConcurrentDictionary`2.Values">
+            <summary>
+            Returns a collection of the values in the dictionary.
+            </summary>
+        </member>
+        <member name="M:FASTER.core.SafeConcurrentDictionary`2.AddOrUpdate(`0,System.Func{`0,`1},System.Func{`0,`1,`1})">
+            <summary>
+            Adds or updates a key/value pair to the dictionary.
+            </summary>
+        </member>
+        <member name="M:FASTER.core.SafeConcurrentDictionary`2.AddOrUpdate(`0,`1,System.Func{`0,`1,`1})">
+            <summary>
+            Adds or updates a key/value pair to the dictionary.
+            </summary>
+        </member>
+        <member name="M:FASTER.core.SafeConcurrentDictionary`2.GetOrAdd(`0,System.Func{`0,`1})">
+            <summary>
+            Adds a key/value pair to the dictionary if it does not exist.
+            </summary>
+        </member>
+        <member name="M:FASTER.core.SafeConcurrentDictionary`2.GetOrAdd(`0,`1)">
+            <summary>
+            Adds a key/value pair to the dictionary if it does not exist.
+            </summary>
+        </member>
+        <member name="M:FASTER.core.SafeConcurrentDictionary`2.Clear">
+            <summary>
+            Clears the dictionary.
+            </summary>
+        </member>
+        <member name="M:FASTER.core.SafeConcurrentDictionary`2.ContainsKey(`0)">
+            <summary>
+            Returns whether or not the dictionary contains the specified key.
+            </summary>
+        </member>
+        <member name="M:FASTER.core.SafeConcurrentDictionary`2.GetEnumerator">
+            <summary>
+            Returns an enumerator of the elements in the dictionary.
+            </summary>
+        </member>
+        <member name="M:FASTER.core.SafeConcurrentDictionary`2.ToArray">
+            <summary>
+            Copies the key/value pairs to a new array.
+            </summary>
+        </member>
+        <member name="M:FASTER.core.SafeConcurrentDictionary`2.TryAdd(`0,`1)">
+            <summary>
+            Attempts to add the specified key/value to the dictionary if it does not exist.
+            Returns true or false depending on if the value was added or not, respectively.
+            </summary>
+        </member>
+        <member name="M:FASTER.core.SafeConcurrentDictionary`2.TryGetValue(`0,`1@)">
+            <summary>
+            Attempts to get the value for the specified key.
+            Returns true if the key was in the dictionary or false otherwise.
+            </summary>
+        </member>
+        <member name="M:FASTER.core.SafeConcurrentDictionary`2.TryRemove(`0,`1@)">
+            <summary>
+            Attempts to remove the value for the specified key.
+            Returns true if the key was in the dictionary or false otherwise.
+            </summary>
+        </member>
+        <member name="M:FASTER.core.SafeConcurrentDictionary`2.TryUpdate(`0,`1,`1)">
+            <summary>
+            Compares the existing value for the specified key with a specified value,
+            and updates it if and only if it is a match. Returns true is updated or
+            false otherwise.
+            </summary>
+        </member>
+        <member name="M:FASTER.core.SafeConcurrentDictionary`2.GetLock(`0)">
+            <summary>
+            Retrieves lock associated with a key (creating it if it does not exist).
+            </summary>
+        </member>
+        <member name="T:FASTER.core.Status">
+            <summary>
+            Status result of operation on FASTER
+            </summary>
+        </member>
+        <member name="F:FASTER.core.Status.OK">
+            <summary>
+            For Read and RMW, item being read was found, and
+            the operation completed successfully
+            For Upsert, item was upserted successfully
+            </summary>
+        </member>
+        <member name="F:FASTER.core.Status.NOTFOUND">
+            <summary>
+            For Read and RMW, item being read was not found
+            </summary>
+        </member>
+        <member name="F:FASTER.core.Status.PENDING">
+            <summary>
+            Operation went pending (async)
+            </summary>
+        </member>
+        <member name="F:FASTER.core.Status.ERROR">
+            <summary>
+            Operation resulted in some error
+            </summary>
+        </member>
+        <member name="T:FASTER.core.Empty">
+            <summary>
+            Empty type
+            </summary>
+        </member>
+        <member name="F:FASTER.core.Empty.Default">
+            <summary>
+            Default
+            </summary>
+        </member>
+        <member name="T:FASTER.core.Utility">
+            <summary>
+            FASTER utility functions
+            </summary>
+        </member>
+        <member name="M:FASTER.core.Utility.GetSize``1(``0)">
+            <summary>
+            Get size of type
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="value"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.Utility.IsBlittable``1">
+            <summary>
+            Is type blittable
+            </summary>
+            <typeparam name="T"></typeparam>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.Utility.IsEqual(System.Byte*,System.Byte*)">
+            <summary>
+            Helper function used to check if two byte arrays are equal
+            </summary>
+            <param name="src"></param>
+            <param name="dest"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.Utility.IsEqual(System.Byte*,System.Byte*,System.Int32)">
+            <summary>
+            Helper function used to check if two byte arrays of given length are equal
+            </summary>
+            <param name="src"></param>
+            <param name="dst"></param>
+            <param name="length"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.Utility.Copy(System.Byte*,System.Byte*,System.Int32)">
+            <summary>
+            Copy numBytes bytes from src to dest
+            </summary>
+            <param name="src"></param>
+            <param name="dest"></param>
+            <param name="numBytes"></param>
+        </member>
+        <member name="M:FASTER.core.Utility.GetHashCode(System.Int64)">
+            <summary>
+            Get 64-bit hash code for a long value
+            </summary>
+            <param name="input"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.Utility.HashBytes(System.Byte*,System.Int32)">
+            <summary>
+            Get 64-bit hash code for a byte array
+            </summary>
+            <param name="pbString"></param>
+            <param name="len"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.Utility.IsPowerOfTwo(System.Int64)">
+            <summary>
+            Is power of 2
+            </summary>
+            <param name="x"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.Utility.GetLogBase2(System.Int32)">
+            <summary>
+            Get log base 2
+            </summary>
+            <param name="x"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.Utility.GetLogBase2(System.UInt64)">
+            <summary>
+            Get log base 2
+            </summary>
+            <param name="value"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.Utility.Is32Bit(System.Int64)">
+            <summary>
+            Check if power of two
+            </summary>
+            <param name="x"></param>
+            <returns></returns>
+        </member>
+        <member name="M:FASTER.core.Utility.Murmur3(System.Int32)">
+            <summary>
+            A 32-bit murmur3 implementation.
+            </summary>
+            <param name="h"></param>
+            <returns></returns>
+        </member>
+        <member name="T:AssemblyRef">
+            <summary>
+            Sets public key string for friend assemblies.
+            </summary>
+        </member>
+    </members>
+</doc>
