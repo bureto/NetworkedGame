@@ -1,0 +1,14 @@
+C:\Users\Brett\Downloads\FASTER-master\cs\playground\SumStore\bin\x64\Debug\net46\win7-x64\SumStore.exe.config
+C:\Users\Brett\Downloads\FASTER-master\cs\playground\SumStore\bin\x64\Debug\net46\win7-x64\SumStore.runtimeconfig.json
+C:\Users\Brett\Downloads\FASTER-master\cs\playground\SumStore\bin\x64\Debug\net46\win7-x64\SumStore.runtimeconfig.dev.json
+C:\Users\Brett\Downloads\FASTER-master\cs\playground\SumStore\bin\x64\Debug\net46\win7-x64\SumStore.exe
+C:\Users\Brett\Downloads\FASTER-master\cs\playground\SumStore\bin\x64\Debug\net46\win7-x64\SumStore.pdb
+C:\Users\Brett\Downloads\FASTER-master\cs\playground\SumStore\bin\x64\Debug\net46\win7-x64\System.Runtime.CompilerServices.Unsafe.dll
+C:\Users\Brett\Downloads\FASTER-master\cs\playground\SumStore\bin\x64\Debug\net46\win7-x64\FASTER.core.dll
+C:\Users\Brett\Downloads\FASTER-master\cs\playground\SumStore\bin\x64\Debug\net46\win7-x64\FASTER.core.pdb
+C:\Users\Brett\Downloads\FASTER-master\cs\playground\SumStore\bin\x64\Debug\net46\win7-x64\FASTER.core.xml
+C:\Users\Brett\Downloads\FASTER-master\cs\playground\SumStore\obj\x64\Debug\net46\win7-x64\SumStore.csprojResolveAssemblyReference.cache
+C:\Users\Brett\Downloads\FASTER-master\cs\playground\SumStore\obj\x64\Debug\net46\win7-x64\SumStore.csproj.CoreCompileInputs.cache
+C:\Users\Brett\Downloads\FASTER-master\cs\playground\SumStore\obj\x64\Debug\net46\win7-x64\SumStore.AssemblyInfo.cs
+C:\Users\Brett\Downloads\FASTER-master\cs\playground\SumStore\obj\x64\Debug\net46\win7-x64\SumStore.exe
+C:\Users\Brett\Downloads\FASTER-master\cs\playground\SumStore\obj\x64\Debug\net46\win7-x64\SumStore.pdb
